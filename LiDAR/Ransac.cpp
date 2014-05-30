@@ -15,7 +15,7 @@ Ransac::~Ransac(void)
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
 	double probability_= 0.8;            // probability to pick a sample with 0 outliers
-	int max_iterations_ = 100;//100000;  // safeguard against being stuck in this loop forever
+	int max_iterations_ = 10000;//100000;  // safeguard against being stuck in this loop forever
 	nr_p = 0;
 
 	if (pElement == NULL)
@@ -62,7 +62,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 				n_best_inliers_count = nr_p;
 				final_model_coefficients = model_coefficients;
 			}
-
+			nr_p=0;
 			//// Compute the k parameter (k=log(z)/log(1-w^n))
 			double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
 			//double p_no_outliers = 1.0 - pow (w, static_cast<double> (selection.size ()));

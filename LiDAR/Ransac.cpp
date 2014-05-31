@@ -34,7 +34,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 
 	 double k = 1.0;
 
-     Eigen::VectorXd final_model_coefficients;// the coefficients corriispondent to the max number of inliers
+     Eigen::VectorXd final_model_coefficients;// the coefficients corrispondent to the max number of inliers
 
      double log_probability  = log (1.0 - probability_);
      double one_over_indices = 1.0 / static_cast<double> (pDesc->getPointCount());
@@ -45,26 +45,24 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 		//msg2 += "It "+ StringUtilities::toDisplayString(iterations_)+'\n';
 
 		// Get the 3 samples which satisfy the plane model criteria
-		if (getSamples(3)==true)
+		if (getSamples(3) == true)
 		{
 			computeModelCoefficients(acc);
 
 			// Select the inliers that are within threshold_ from the model
-			//countWithinDistance(0.00000001, acc);
 			countWithinDistance(0.01, acc);
 			if (nr_p > n_best_inliers_count)
 			{
 				n_best_inliers_count = nr_p;
 				final_model_coefficients = model_coefficients;
+				// Compute the k parameter (k=log(z)/log(1-w^n))
+				double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
+				double p_no_outliers = 1.0 - pow (w, static_cast<double> (3));
+				p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
+				p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
+				k = log_probability / log (p_no_outliers);
 			}
 			nr_p = 0;
-
-			//// Compute the k parameter (k=log(z)/log(1-w^n))
-			double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
-			double p_no_outliers = 1.0 - pow (w, static_cast<double> (3));
-			p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
-			p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
-			k = log_probability / log (p_no_outliers);
 		}
 	++iterations_;
 	}

@@ -158,6 +158,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
    const uint32_t adv = pDesc->getPointCount() / 50;// serve per il progress report
    
+   acc->toIndex(0);
    for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
    {
 	  if (!acc.isValid())

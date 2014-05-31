@@ -14,8 +14,8 @@ Ransac::~Ransac(void)
 
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
-	double probability_= 0.8;            // probability to pick a sample with 0 outliers
-	int max_iterations_ = 10000;//100000;  // safeguard against being stuck in this loop forever
+	double probability_= 0.99;         // probability to pick a sample with 0 outliers
+	int max_iterations_ = 100000;     // safeguard against being stuck in this loop forever
 	nr_p = 0;
 
 	if (pElement == NULL)
@@ -34,48 +34,43 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 
 	 double k = 1.0;
 
-     std::vector<int> selection;
      Eigen::VectorXd final_model_coefficients;// the coefficients corriispondent to the max number of inliers
-	
+
      double log_probability  = log (1.0 - probability_);
      double one_over_indices = 1.0 / static_cast<double> (pDesc->getPointCount());
-	
-	int n_inliers_count = 0;
-   
-	
+
 	// Iterate
     while (iterations_ < k && iterations_ <  max_iterations_)
     {
 		//msg2 += "It "+ StringUtilities::toDisplayString(iterations_)+'\n';
-		
+
 		// Get the 3 samples which satisfy the plane model criteria
-		getSamples(3);
 		if (getSamples(3)==true)
 		{
 			computeModelCoefficients(acc);
 
 			// Select the inliers that are within threshold_ from the model
 			//countWithinDistance(0.00000001, acc);
-			countWithinDistance(0.2, acc);
+			countWithinDistance(0.01, acc);
 			if (nr_p > n_best_inliers_count)
 			{
 				n_best_inliers_count = nr_p;
 				final_model_coefficients = model_coefficients;
 			}
-			nr_p=0;
+			nr_p = 0;
+
 			//// Compute the k parameter (k=log(z)/log(1-w^n))
 			double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
-			//double p_no_outliers = 1.0 - pow (w, static_cast<double> (selection.size ()));
-			double p_no_outliers = 1.0 - pow (w, static_cast<double> (n_best_inliers_count));
+			double p_no_outliers = 1.0 - pow (w, static_cast<double> (3));
 			p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
 			p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
 			k = log_probability / log (p_no_outliers);
 		}
-		 ++iterations_;
+	++iterations_;
 	}
-	 
 	 msg2 += "iterations "+StringUtilities::toDisplayString(iterations_)+"\n\n";
-	 msg2 += "model coefficients "+StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	 msg2 += "inliers found:  "+StringUtilities::toDisplayString(n_best_inliers_count)+"\n\n";
+	 msg2 += "model coefficients \n"+StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
 	 return true;
 }
 
@@ -104,7 +99,7 @@ bool Ransac::getSamples (int  model_points)
 		  point_index = index_dist(rng);
 		  random_selected_indices[i] = point_index;
 	   }
-	   
+
 	   //msg2 = "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+'\n'+ StringUtilities::toDisplayString(random_selected_indices[1])+'\n'+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
 	   return true;
 }
@@ -113,7 +108,7 @@ bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 {
 		/////////////////////      RETRIEVE DATA FROM POINTCLOUDS       ///////////////////
 		Eigen::Array4d p0, p1, p2;//store for the 3 random selected points
-		
+
 		acc->toIndex(random_selected_indices[0]);
 		p0[0] = acc->getXAsDouble(true);
 		p0[1] = acc->getYAsDouble(true);
@@ -130,7 +125,7 @@ bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 		p2[2] = acc->getZAsDouble(true);
 
 		acc->toIndex(0);
-	
+
 		/////////////////// FIND PLANE COEFFICIENTS ///////////////////////////////////////
   
 		/*http://www.cplusplus.com/forum/general/74720/
@@ -175,13 +170,14 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 {
 	  std::vector<double> distances; 
 	  std::vector<double> error_sqr_dists_;
-	 
+
 	  inliers.resize (pDesc->getPointCount());
 	  distances.resize(pDesc->getPointCount());
 	  error_sqr_dists_.resize(pDesc->getPointCount());
-	  double sum_distances = 0;
+	  //double sum_distances = 0;
 	  double mean_distances = 0;
      // msg2 += "inliers \n";
+	  acc->toIndex(0);
 	  // Iterate through the 3d points and calculate the distances from them to the plane
 	  for (size_t i = 0; i < pDesc->getPointCount(); ++i)
 	  {
@@ -192,8 +188,8 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 						   acc->getZAsDouble(true),
 							1);
 		distances[i] = fabs (model_coefficients.dot (pt));
-		sum_distances += distances[i];
-	
+		//sum_distances += distances[i];
+
 		acc->getPointId();
 		if (distances[i] < threshold)//I verified that with a treshold = 0.00000001 (approximation for 0), the method finds only 3 inliers: the 3 points with whom we build the plane
 		{
@@ -206,7 +202,7 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 		acc->nextValidPoint();
 	  }
 	  acc->toIndex(0);
-	  mean_distances = sum_distances / static_cast<double>(pDesc->getPointCount());
+	  //mean_distances = sum_distances / static_cast<double>(pDesc->getPointCount());
 	 // msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found on"+StringUtilities::toDisplayString(pDesc->getPointCount())+" total points\n";
 	return true;
 }
@@ -218,7 +214,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 	// Eigen align dispone le matrici su un array e poi vi si accede con () ??????
 	EIGEN_ALIGN16 Eigen::Matrix3d covariance_matrix;
     Eigen::Vector4d xyz_centroid;// centroid: the mean vector  
-	
+
 	Eigen::Matrix<double, 1, 9, Eigen::RowMajor> sum = Eigen::Matrix<double, 1, 9, Eigen::RowMajor>::Zero (); // matrix used to compute covariance matrix see centroid.hpp (common)
 
 	 //I must use only the inliers; 
@@ -533,5 +529,3 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     roots (2) = 0.5f * (b + sd);
     roots (1) = 0.5f * (b - sd);
   }
-
-

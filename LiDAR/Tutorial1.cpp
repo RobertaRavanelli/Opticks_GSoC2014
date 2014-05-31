@@ -61,11 +61,6 @@ REGISTER_PLUGIN_BASIC(OpticksTutorial, Tutorial1);
 namespace
 {
 template<typename T>
-//void assign(T* pData, int bin)
-//{
-//   *pData = static_cast<T>(bin);
-//}
-
 void updateStatistics(T* pData, double& min, double& max, double& total)
    {
       min = std::min(min, static_cast<double>(*pData));

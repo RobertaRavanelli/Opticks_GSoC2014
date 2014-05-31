@@ -68,10 +68,10 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 		}
 	++iterations_;
 	}
-	 msg2 += "iterations "+StringUtilities::toDisplayString(iterations_)+"\n\n";
-	 msg2 += "inliers found:  "+StringUtilities::toDisplayString(n_best_inliers_count)+"\n\n";
-	 msg2 += "model coefficients \n"+StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
-	 return true;
+	msg2 += "iterations "+StringUtilities::toDisplayString(iterations_)+"\n\n";
+	msg2 += "inliers found:  "+StringUtilities::toDisplayString(n_best_inliers_count)+"\n\n";
+	msg2 += "model coefficients \n"+StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	return true;
 }
 
 bool Ransac::getSamples (int  model_points)

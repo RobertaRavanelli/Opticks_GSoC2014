@@ -35,6 +35,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	 double k = 1.0;
 
      Eigen::VectorXd final_model_coefficients;// the coefficients corrispondent to the max number of inliers
+	 std::vector<int> final_inliers;
 
      double log_probability  = log (1.0 - probability_);
      double one_over_indices = 1.0 / static_cast<double> (pDesc->getPointCount());
@@ -42,19 +43,22 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	// Iterate
     while (iterations_ < k && iterations_ <  max_iterations_)
     {
-		//msg2 += "It "+ StringUtilities::toDisplayString(iterations_)+'\n';
-
+		//msg2 += "\nIteration "+ StringUtilities::toDisplayString(iterations_)+'\n';
+		
 		// Get the 3 samples which satisfy the plane model criteria
 		if (getSamples(3) == true)
 		{
 			computeModelCoefficients(acc);
-
+			
 			// Select the inliers that are within threshold_ from the model
-			countWithinDistance(0.01, acc);
+			countWithinDistance(0.02, acc);
+
 			if (nr_p > n_best_inliers_count)
 			{
 				n_best_inliers_count = nr_p;
+				
 				final_model_coefficients = model_coefficients;
+				final_inliers = inliers;
 				// Compute the k parameter (k=log(z)/log(1-w^n))
 				double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
 				double p_no_outliers = 1.0 - pow (w, static_cast<double> (3));
@@ -63,18 +67,71 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 				k = log_probability / log (p_no_outliers);
 			}
 			nr_p = 0;
+			++iterations_;
 		}
-	++iterations_;
 	}
-	msg2 += "iterations "+StringUtilities::toDisplayString(iterations_)+"\n\n";
-	msg2 += "inliers found:  "+StringUtilities::toDisplayString(n_best_inliers_count)+"\n\n";
-	msg2 += "model coefficients \n"+StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	//needed to the optimizeModelCoefficients method
+	nr_p = n_best_inliers_count;
+	inliers = final_inliers;
+
+	msg2 += "------RANSAC final results-------\n";
+	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	if (optimizeModelCoefficients(acc) == true)
+	{
+			final_model_coefficients = optimized_coefficients;
+    }
+	
+	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+"\n\n";
+	msg2 += "inliers found:  " + StringUtilities::toDisplayString(n_best_inliers_count)+"\n";
+	for(size_t i = 0; i < n_best_inliers_count; i++)
+	{
+		msg2 +=  StringUtilities::toDisplayString(final_inliers[i])+" ";
+	}
+
+	msg2 += "\n\n optimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
 	return true;
 }
 
+// Up to now, the check to not select the same points doesn't work
 bool Ransac::getSamples (int  model_points)
 {
-	   int while_counter = 0;
+	   //random_selected_indices.resize(model_points);
+	   //int random_index = -1;
+
+	   ////http://www.boost.org/doc/libs/1_55_0/doc/html/boost_random/tutorial.html#boost_random.tutorial.generating_a_random_password.c5
+	   //boost::random::random_device rng;
+	   //boost::random::uniform_int_distribution<> index_dist(0, pDesc->getPointCount() - 1);
+    //   int i_count = 0;
+	   //bool repeat_flag;// flag to repeat the random generation 
+	   //for (size_t i = 0; i < model_points; ++i)
+	   //{
+		  // repeat_flag = false;
+		  // do
+		  // {
+			 //  int random_index = index_dist(rng); //estrazione variabile casuale
+			 //  // check that the new value isn't already in the random_selected_indices array
+			 //  if (i_count !=0)
+			 //  {
+				//   //for(int j=i-1; j>=0; --j)
+	   //             for(size_t j=1; j<=i-1; ++j)
+				//   {
+				//	   if (random_index == random_selected_indices[j])
+				//	   {
+				//		   repeat_flag = true;
+				//		   break;
+				//	   }
+				//   }
+			 //  }
+		  // }
+		  // while(repeat_flag);
+		  // random_selected_indices[i] = random_index;
+		  // i_count++;
+	   //}
+
+	   //// msg2 += "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+'\n'+ StringUtilities::toDisplayString(random_selected_indices[1])+'\n'+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
+	   //return true;
+
+	 int while_counter = 0;
 
 	   random_selected_indices.resize(model_points);
 	   int point_index = -1;
@@ -84,8 +141,9 @@ bool Ransac::getSamples (int  model_points)
   
 	   for (size_t i = 0; i < model_points; ++i)
 	   {
+		   int a = index_dist(rng);
 		   //a check not to select the same points
-		   while(point_index == index_dist(rng))
+		   while(point_index == a)
 		   {
 			   while_counter ++;
 			   if (while_counter > 10000)
@@ -94,11 +152,11 @@ bool Ransac::getSamples (int  model_points)
 				   return false;
 			   }
 		   }
-		  point_index = index_dist(rng);
+		  point_index = a;
 		  random_selected_indices[i] = point_index;
 	   }
 
-	   //msg2 = "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+'\n'+ StringUtilities::toDisplayString(random_selected_indices[1])+'\n'+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
+	   //msg2 = "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+' '+ StringUtilities::toDisplayString(random_selected_indices[1])+' '+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
 	   return true;
 }
 
@@ -106,7 +164,7 @@ bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 {
 		/////////////////////      RETRIEVE DATA FROM POINTCLOUDS       ///////////////////
 		Eigen::Array4d p0, p1, p2;//store for the 3 random selected points
-
+	
 		acc->toIndex(random_selected_indices[0]);
 		p0[0] = acc->getXAsDouble(true);
 		p0[1] = acc->getYAsDouble(true);
@@ -174,7 +232,7 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 	  error_sqr_dists_.resize(pDesc->getPointCount());
 	  //double sum_distances = 0;
 	  double mean_distances = 0;
-     // msg2 += "inliers \n";
+      //msg2 += "inliers \n";
 	  acc->toIndex(0);
 	  // Iterate through the 3d points and calculate the distances from them to the plane
 	  for (size_t i = 0; i < pDesc->getPointCount(); ++i)
@@ -201,7 +259,7 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 	  }
 	  acc->toIndex(0);
 	  //mean_distances = sum_distances / static_cast<double>(pDesc->getPointCount());
-	 // msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found on"+StringUtilities::toDisplayString(pDesc->getPointCount())+" total points\n";
+	  //msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found\n\n";
 	return true;
 }
 
@@ -231,7 +289,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 		  sum [8] += acc->getZAsDouble(true);
 	 }
   
-   sum  /= static_cast<double> (pDesc->getPointCount());
+   sum  /= static_cast<double> (nr_p);
 
    // see centroid.hpp (common)
     xyz_centroid[0] = sum [6]; // mean of the X values 
@@ -251,140 +309,23 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 	// Compute the model coefficients
     EIGEN_ALIGN16 Eigen::Vector3d::Scalar eigen_value;
     EIGEN_ALIGN16 Eigen::Vector3d eigen_vector;
-	eigen33 (covariance_matrix, eigen_value, eigen_vector); //now it compiless, before it gave error LNK 2019, LNK 1120 eigen33: common/eigen.h: non funziona, provo a copiarla di sotto
+	eigen33 (covariance_matrix, eigen_value, eigen_vector); // attention to this problem http://www.pcl-users.org/different-eigen33-implementations-give-different-results-td4025849.html
 
-	//msg2 += "eigen vector: BEFORE COMPUTATION \n"+StringUtilities::toDisplayString(eigen_vector[0])+'\n'+ StringUtilities::toDisplayString(eigen_vector[1])+'\n'+StringUtilities::toDisplayString(eigen_vector[2])+'\n'+'\n';// verifica
+	//Eigen::Matrix3d eigvect_eigen;
+    //Eigen::Vector3d eigval_eigen;
+    //Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(covariance_matrix);
+    //eigvect_eigen = eigensolver.eigenvectors();
+    //eigval_eigen = eigensolver.eigenvalues();
+    //eigen_vector= eigvect_eigen.col(0);//devo prendere il più piccolo: devo ordinarli
 
-	///////////////////////////////////////      PCL::EIGEN33  Pcl/common/eigen.h        /////////////////////////////////////////////////
-	//
-	//double scale = covariance_matrix.cwiseAbs ().maxCoeff ();
- //   if (scale <= std::numeric_limits<double>::min ())
-	//{ scale = double (1.0);}
-
-	//
-	//EIGEN_ALIGN16 Eigen::Matrix3d scaledMat = covariance_matrix / scale;
-	//EIGEN_ALIGN16 Eigen::Vector3d eigenvalues; 
-
-	///*Eigen::Matrix3d scaledMat = covariance_matrix / scale;
-	//Eigen::Vector3d eigenvalues; */
-
-	//// computeRoots (scaledMat, eigenvalues); // error LNK 2019, LNK 1120 eigen33: common/eigen.h: non funziona, provo a copiarla di sotto
- // 
-	//                /////////////////      PCL::COMPUTE ROOTS  PCL::common/eigen.h        ///////////////////
-	//				// The characteristic equation is x^3 - c2*x^2 + c1*x - c0 = 0.  The
-	//				// eigenvalues are the roots to this equation, all guaranteed to be
-	//				// real-valued, because the matrix is symmetric.
-	//				double c0 =            scaledMat (0, 0) * scaledMat (1, 1) * scaledMat (2, 2)
-	//						+ double (2) * scaledMat (0, 1) * scaledMat (0, 2) * scaledMat (1, 2)
-	//									 - scaledMat (0, 0) * scaledMat (1, 2) * scaledMat (1, 2)
-	//									 - scaledMat (1, 1) * scaledMat (0, 2) * scaledMat (0, 2)
-	//									 - scaledMat (2, 2) * scaledMat (0, 1) * scaledMat (0, 1);
-	//				double c1 = scaledMat (0, 0) * scaledMat (1, 1) -
-	//							scaledMat (0, 1) * scaledMat (0, 1) +
-	//							scaledMat (0, 0) * scaledMat (2, 2) -
-	//							scaledMat (0, 2) * scaledMat (0, 2) +
-	//							scaledMat (1, 1) * scaledMat (2, 2) -
-	//							scaledMat (1, 2) * scaledMat (1, 2);
-	//				double c2 = scaledMat (0, 0) + scaledMat (1, 1) + scaledMat (2, 2);
-
-	//				if (fabs (c0) < Eigen::NumTraits<double>::epsilon ())// one root is 0 -> quadratic equation
-	//				{ 
-	//					eigenvalues (0) = double (0);
-	//					double b= c2;
-	//					double c= c1;
-	//					double d = double (b * b - 4.0 * c);
-	//					if (d < 0.0) // no real roots!!!! THIS SHOULD NOT HAPPEN!
-	//					  d = 0.0;
-
-	//					double sd = ::std::sqrt (d);
-
-	//					eigenvalues (2) = 0.5f * (b + sd);
-	//					eigenvalues (1) = 0.5f * (b - sd);
-	//				}
-	//				else
-	//				{
-	//				  const double s_inv3 = double (1.0 / 3.0);
-	//				  const double s_sqrt3 = std::sqrt (double (3.0));
-	//				  // Construct the parameters used in classifying the roots of the equation
-	//				  // and in solving the equation for the roots in closed form.
-	//				  double c2_over_3 = c2*s_inv3;
-	//				  double a_over_3 = (c1 - c2 * c2_over_3) * s_inv3;
-	//				  if (a_over_3 > double (0))
-	//					a_over_3 = double (0);
-
-	//				  double half_b = double (0.5) * (c0 + c2_over_3 * (double (2) * c2_over_3 * c2_over_3 - c1));
-
-	//				  double q = half_b * half_b + a_over_3 * a_over_3*a_over_3;
-	//				  if (q > double (0))
-	//					q = double (0);
-
-	//				  // Compute the eigenvalues by solving for the roots of the polynomial.
-	//				  double rho = std::sqrt (-a_over_3);
-	//				  double theta = std::atan2 (std::sqrt (-q), half_b) * s_inv3;
-	//				  double cos_theta = std::cos (theta);
-	//				  double sin_theta = std::sin (theta);
-	//				  eigenvalues (0) = c2_over_3 + double (2) * rho * cos_theta;
-	//				  eigenvalues (1) = c2_over_3 - rho * (cos_theta + s_sqrt3 * sin_theta);
-	//				  eigenvalues (2) = c2_over_3 - rho * (cos_theta - s_sqrt3 * sin_theta);
-
-	//				  // Sort in increasing order.
-	//				  if (eigenvalues (0) >= eigenvalues (1))
-	//					std::swap (eigenvalues (0), eigenvalues (1));
-	//				  if (eigenvalues (1) >= eigenvalues (2))
-	//				  {
-	//					std::swap (eigenvalues (1), eigenvalues (2));
-	//					if (eigenvalues(0) >=eigenvalues (1))
-	//					  std::swap (eigenvalues (0), eigenvalues (1));
-	//				  }
-
-	//				  if (eigenvalues (0) <= 0) // eigenval for symetric positive semi-definite matrix can not be negative! Set it to 0
-	//				  {//computeRoots2double(c2, c1, roots);
-	//				  //computeRoots2double(c2, c1,roots);
-	//						eigenvalues (0) = double (0);
-	//						double b= c2;
-	//						double c= c1;
-	//						double d = double (b * b - 4.0 * c);
-	//						if (d < 0.0) // no real roots!!!! THIS SHOULD NOT HAPPEN!
-	//						  d = 0.0;
-
-	//						double sd = ::std::sqrt (d);
-
-	//						eigenvalues (2) = 0.5f * (b + sd);
-	//						eigenvalues (1) = 0.5f * (b - sd);
-	//				  }
-	//				}
-	//				///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	////eigen_value (0) = eigenvalues (0) * scale;
-	//eigen_value  = eigenvalues (0) * scale;
-
- //   scaledMat.diagonal ().array () -= eigenvalues (0);
-
-	////msg2 += "\neigen value \n"+StringUtilities::toDisplayString(eigen_value (0))+'\n'+'\n';// verifica
-	//msg2 += "\neigen value \n"+StringUtilities::toDisplayString(eigen_value)+'\n'+'\n';// verifica
-
- //   EIGEN_ALIGN16 Eigen::Vector3d vec1 = scaledMat.row (0).cross (scaledMat.row (1));
- //   EIGEN_ALIGN16 Eigen::Vector3d vec2 = scaledMat.row (0).cross (scaledMat.row (2));
- //   EIGEN_ALIGN16 Eigen::Vector3d vec3 = scaledMat.row (1).cross (scaledMat.row (2));
-
- //   double len1 = vec1.squaredNorm ();
- //   double len2 = vec2.squaredNorm ();
- //   double len3 = vec3.squaredNorm ();
-
- //   if (len1 >= len2 && len1 >= len3)
- //     eigen_vector = vec1 / std::sqrt (len1);
- //   else if (len2 >= len1 && len2 >= len3)
- //     eigen_vector = vec2 / std::sqrt (len2);
- //   else
- //     eigen_vector = vec3 / std::sqrt (len3);
-
-   msg2 += "\neigen value \n"+StringUtilities::toDisplayString(eigen_value)+'\n'+'\n';// verifica
-   msg2 += "eigen vector: normal of the plane \n"+StringUtilities::toDisplayString(eigen_vector[0])+'\n'+ StringUtilities::toDisplayString(eigen_vector[1])+'\n'+StringUtilities::toDisplayString(eigen_vector[2])+'\n'+'\n';// verifica
+   //msg2 += "\neigen value \n"+StringUtilities::toDisplayString(eigen_value)+'\n'+'\n';// verifica
+   //msg2 += "eigen vector: normal of the plane \n"+StringUtilities::toDisplayString(eigen_vector[0])+'\n'+ StringUtilities::toDisplayString(eigen_vector[1])+'\n'+StringUtilities::toDisplayString(eigen_vector[2])+'\n'+'\n';// verifica
 
  //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Hessian form (D = nc . p_plane (centroid here) + p)
   // The eigenvector (we must use the smallest) values are a, b and c coefficients and then we use the mean of x, y and z to define a point on that plane in order to solve for d: http://xiang-jun.blogspot.it/2009/08/fit-least-squares-plane-to-set-of.html
-  Eigen::VectorXd optimized_coefficients;
+ 
 
   optimized_coefficients.resize (4);
   optimized_coefficients[0] = eigen_vector [0];
@@ -393,7 +334,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
   optimized_coefficients[3] = 0;
   optimized_coefficients[3] = -1 * optimized_coefficients.dot (xyz_centroid);
 
-  msg2 += "Optimized plane parameters \n"+StringUtilities::toDisplayString(optimized_coefficients[0])+'\n'+ StringUtilities::toDisplayString(optimized_coefficients[1])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[2])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[3])+'\n';// verifica
+  //msg2 += "Optimized plane parameters \n"+StringUtilities::toDisplayString(optimized_coefficients[0])+'\n'+ StringUtilities::toDisplayString(optimized_coefficients[1])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[2])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[3])+'\n';// verifica
 
 	 return true;
 }

@@ -40,9 +40,10 @@ public:
 	 
 	std::vector<int> random_selected_indices;
     const PointCloudDataDescriptor* pDesc;
-	std::vector<int> inliers; // it contains the inliers indexes (their ID)
-	int nr_p;//NUMBER OF THE INLIERS
-	
+	std::vector<int> inliers; // it contains the inliers indexes (their ID) for the single iterations
+	int nr_p;//NUMBER OF THE INLIERS for the single iterations
+	Eigen::VectorXd optimized_coefficients;
+
 	std::string msg2;
 
 	Ransac(void);

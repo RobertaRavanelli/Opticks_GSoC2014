@@ -9,4 +9,4 @@
 
 #include "PlugInRegistration.h"
 
-REGISTER_MODULE(OpticksTutorial);
+REGISTER_MODULE(LidarRoof);

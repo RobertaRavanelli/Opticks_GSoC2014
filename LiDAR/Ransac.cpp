@@ -15,7 +15,7 @@ Ransac::~Ransac(void)
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
 	double probability_= 0.99;         // probability to pick a sample with 0 outliers
-	int max_iterations_ = 100000;     // safeguard against being stuck in this loop forever
+	int max_iterations_ = 200000;     // safeguard against being stuck in this loop forever
 	nr_p = 0;
 
 	if (pElement == NULL)
@@ -28,6 +28,9 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	 FactoryResource<PointCloudDataRequest> req;
      req->setWritable(true);
 	 PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
+
+	 int minimum_model_points = 3;
+	 double ransac_threshold = 0.02;
 
 	 int iterations_ = 0;
      int n_best_inliers_count = -INT_MAX;
@@ -46,12 +49,12 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 		//msg2 += "\nIteration "+ StringUtilities::toDisplayString(iterations_)+'\n';
 		
 		// Get the 3 samples which satisfy the plane model criteria
-		if (getSamples(3) == true)
+		if (getSamples(minimum_model_points) == true)
 		{
 			computeModelCoefficients(acc);
 			
 			// Select the inliers that are within threshold_ from the model
-			countWithinDistance(0.02, acc);
+			countWithinDistance(ransac_threshold, acc);
 
 			if (nr_p > n_best_inliers_count)
 			{
@@ -61,7 +64,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 				final_inliers = inliers;
 				// Compute the k parameter (k=log(z)/log(1-w^n))
 				double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
-				double p_no_outliers = 1.0 - pow (w, static_cast<double> (3));
+				double p_no_outliers = 1.0 - pow (w, static_cast<double> (minimum_model_points));
 				p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
 				p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
 				k = log_probability / log (p_no_outliers);
@@ -81,14 +84,14 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 			final_model_coefficients = optimized_coefficients;
     }
 	
-	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+"\n\n";
+	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+" on "+StringUtilities::toDisplayString(k)+" needed\n\n";
 	msg2 += "inliers found:  " + StringUtilities::toDisplayString(n_best_inliers_count)+"\n";
 	for(size_t i = 0; i < n_best_inliers_count; i++)
 	{
 		msg2 +=  StringUtilities::toDisplayString(final_inliers[i])+" ";
 	}
 
-	msg2 += "\n\n optimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	msg2 += "\n\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
 	return true;
 }
 

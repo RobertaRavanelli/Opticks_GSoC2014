@@ -45,10 +45,12 @@
 //#include <Eigen/SVD>
 //#include <Eigen/LU>
 //#include <Eigen/Dense>
+#include <cmath>
 
-//#include <gdal/gdal.h>
-//#include <gdal/gdal_priv.h>
-//#include <gdal/gdal_alg.h>
+
+#include <gdal/gdal.h>
+#include <gdal/gdal_priv.h>
+#include <gdal/gdal_alg.h>
 //#include  <opencv2/>
 #include "StringUtilities.h"
 #include "Ransac.h"
@@ -56,11 +58,16 @@
 #include <boost/random/random_device.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
-REGISTER_PLUGIN_BASIC(OpticksTutorial, Tutorial1);
+REGISTER_PLUGIN_BASIC(LidarRoof, Tutorial1);
 
 namespace
 {
 template<typename T>
+//void assign(T* pData, int bin)
+//{
+//   *pData = static_cast<T>(bin);
+//}
+
 void updateStatistics(T* pData, double& min, double& max, double& total)
    {
       min = std::min(min, static_cast<double>(*pData));
@@ -71,15 +78,16 @@ void updateStatistics(T* pData, double& min, double& max, double& total)
 
 Tutorial1::Tutorial1()
 {
-   setDescriptorId("{5D8F4DD0-9B20-42B1-A060-589DFBC85D00}");
-   setName("Tutorial 1");
+   setDescriptorId("{732D7E3E-1CE0-4D3B-B3A9-7F7B5F6B11B0}");
+   setName("LIDAR Roof Extraction");
    setDescription("Creating your first plug-in.");
    setCreator("Opticks Community");
    setVersion("Sample");
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
    setType("Sample");
-   setMenuLocation("[Tutorial]/Tutorial 1");
+   //setMenuLocation("[Tutorial]/Tutorial 1");
+   setMenuLocation("[Point Cloud]/Roof Extraction");
    setAbortSupported(false);
 }
 
@@ -146,13 +154,11 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    std::vector<double> x_coordinates  =  std::vector<double> (pDesc->getPointCount());
    std::vector<double> y_coordinates  =  std::vector<double> (pDesc->getPointCount());
    std::vector<double> z_coordinates  =  std::vector<double> (pDesc->getPointCount());
-  
 
    // ciclo che accede a tutti i punti della point cloud
    int prog = 0;
    int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
    const uint32_t adv = pDesc->getPointCount() / 50;// serve per il progress report
-   
    acc->toIndex(0);
    for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
    {
@@ -257,8 +263,9 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    
    prova.ComputeModel(pElement);
 
-   progress.report( prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
+   progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
    progress.report(msg, 100, NORMAL);
+   //progress.report(prova.msg2, 100, NORMAL);
    progress.upALevel();
    return true;
 }

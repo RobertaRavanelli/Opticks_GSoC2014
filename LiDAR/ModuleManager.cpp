@@ -10,3 +10,4 @@
 #include "PlugInRegistration.h"
 
 REGISTER_MODULE(LidarRoof);
+

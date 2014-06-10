@@ -22,7 +22,8 @@
 #include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
 #include <Eigen/Eigenvalues>
 #include "StringUtilities.h"
-
+#include <iostream>
+#include <fstream>
 
 // these methods are needed for eigen values
 template<typename Matrix, typename Roots> inline void
@@ -45,7 +46,10 @@ public:
 	Eigen::VectorXd optimized_coefficients;
 
 	std::string msg2;
-
+	std::string msg1; // statistics message
+	std::ofstream myfile;
+	std::string path;// ="C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
+    
 	Ransac(void);
 	~Ransac(void);
 	bool Ransac::ComputeModel(PointCloudElement* pElement);
@@ -55,8 +59,7 @@ public:
 	bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc);
 	bool Ransac::computeRootsdouble (const Eigen::Matrix3d m, Eigen::Vector3d roots);
 	bool Ransac::computeRoots2double (double b, double c, Eigen::Vector3d roots);
-	
-	
-
+	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing);
+	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
 };
 

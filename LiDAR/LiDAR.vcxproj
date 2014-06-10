@@ -50,7 +50,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\32bitSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\32bitSettings.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Macros.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\AllCommonSettings-Debug-32bit.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\PlugInCommonSettings.props" />
@@ -60,7 +60,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\64bitSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\32bitSettings.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Macros.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\AllCommonSettings-Release-64bit.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\PlugInCommonSettings.props" />
@@ -73,26 +73,26 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\CompileSettings\64bitSettings.props" />
-    <Import Project="..\..\..\CompileSettings\Macros.props" />
-    <Import Project="..\..\..\CompileSettings\AllCommonSettings-Release-64bit.props" />
-    <Import Project="..\..\..\CompileSettings\PlugInCommonSettings.props" />
-    <Import Project="..\..\..\CompileSettings\pthreads.props" />
-    <Import Project="..\..\..\CompileSettings\Xerces-Release.props" />
-    <Import Project="..\..\..\CompileSettings\Qt-Release.props" />
-    <Import Project="..\..\..\CompileSettings\EnableWarnings.props" />
-    <Import Project="..\..\..\CompileSettings\gdal.props" />
-    <Import Project="..\..\..\CompileSettings\opencv-release.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\64bitSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Macros.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\AllCommonSettings-Release-64bit.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\PlugInCommonSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\pthreads.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Xerces-Release.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Qt-Release.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\EnableWarnings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\gdal.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\opencv-release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\64bitSettings.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Macros.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\AllCommonSettings-Debug-64bit.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\PlugInCommonSettings.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Xerces-Debug.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Qt-Debug.props" />
-   <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\EnableWarnings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\64bitSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Macros.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\AllCommonSettings-Debug-64bit.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\PlugInCommonSettings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Xerces-Debug.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Qt-Debug.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\EnableWarnings.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -150,7 +150,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\Roberta\Desktop\Universita\GSoC_2014_Opticks\opticks_sdk_20140410\Dependencies\eigen;$(OPTICKSDEPENDENCIESINCLUDE)\gdal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\GSoC_2014_Opticks\opticks-sdk20140410\Dependencies\eigen-eigen-6b38706d90a9;$(OPTICKSDEPENDENCIESINCLUDE)\gdal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -167,7 +167,7 @@
       <Project>{bfaa94f6-8ca1-4159-b0e1-90b09d9c3056}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-   <ProjectReference Include="$(OPTICKS_CODE_DIR)\application\PlugInUtilities\PlugInUtilities.vcxproj">
+    <ProjectReference Include="$(OPTICKS_CODE_DIR)\application\PlugInUtilities\PlugInUtilities.vcxproj">
       <Project>{4831b6df-aeac-4f12-a0b5-ce3ca703fb88}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

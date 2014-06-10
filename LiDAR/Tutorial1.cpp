@@ -86,7 +86,6 @@ Tutorial1::Tutorial1()
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
    setType("Sample");
-   //setMenuLocation("[Tutorial]/Tutorial 1");
    setMenuLocation("[Point Cloud]/Roof Extraction");
    setAbortSupported(false);
 }
@@ -120,11 +119,17 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    {
       return false;
    }
+    
+   //std::string path = "$(OPTICKS_CODE_DIR)/application/PlugIns/src/LiDAR/Results/";//"C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
+  // std::string path = "C:/Users/Roberta/Desktop/Results/";
+  // std::ofstream points_file;
+  // points_file.open (std::string(path)+"Points.txt");
+  // points_file << "Point cloud points\n";
 
    ProgressTracker progress(pInArgList->getPlugInArgValue<Progress>(Executable::ProgressArg()),
       "Calculating pointcloud parameters\n", "prova Roby", getDescriptorId());
 
-   PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
+  PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
 
 
    if (pElement == NULL)
@@ -132,139 +137,158 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	  progress.report("A valid point cloud element must be provided.", 0, ERRORS, true);
       return false;
    }
-   
-   /* Main processing loop */
-   FactoryResource<PointCloudDataRequest> req;
-   req->setWritable(true);
-   PointCloudAccessor acc = PointCloudAccessor (pElement->getPointCloudAccessor(req.release()));
-   if (!acc.isValid())
-   {
-      progress.report("Unable to write to point cloud.", 0, ERRORS, true);
-      return false;
-   }
-   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
+  
+  // /* Main processing loop */
+  // FactoryResource<PointCloudDataRequest> req;
+  // req->setWritable(true);
+  // PointCloudAccessor acc = PointCloudAccessor (pElement->getPointCloudAccessor(req.release()));
+  // if (!acc.isValid())
+  // {
+  //    progress.report("Unable to write to point cloud.", 0, ERRORS, true);
+  //    return false;
+  // }
+  // const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
 
-   // inizializza il min e il max con il valore più alto e più basso possibile
-   double minX, maxX, minY, maxY, minZ, maxZ;
-   minX = minY = minZ = std::numeric_limits<double>::max(); //numero molto grande: facile trovarne uno più piccolo
-   maxX = maxY = maxZ = -minX; //numero molto piccolo: facile trovarne uno più grande
-   double sumX, sumY, sumZ; // servono per la media
-   sumX = sumY = sumZ = 0;
+  // // inizializza il min e il max con il valore più alto e più basso possibile
+  // double minX, maxX, minY, maxY, minZ, maxZ;
+  // minX = minY = minZ = std::numeric_limits<double>::max(); //numero molto grande: facile trovarne uno più piccolo
+  // maxX = maxY = maxZ = -minX; //numero molto piccolo: facile trovarne uno più grande
+  // double sumX, sumY, sumZ; // servono per la media
+  // sumX = sumY = sumZ = 0;
 
-   std::vector<double> x_coordinates  =  std::vector<double> (pDesc->getPointCount());
-   std::vector<double> y_coordinates  =  std::vector<double> (pDesc->getPointCount());
-   std::vector<double> z_coordinates  =  std::vector<double> (pDesc->getPointCount());
+  // std::vector<double> x_coordinates  =  std::vector<double> (pDesc->getPointCount());
+  // std::vector<double> y_coordinates  =  std::vector<double> (pDesc->getPointCount());
+  // std::vector<double> z_coordinates  =  std::vector<double> (pDesc->getPointCount());
 
-   // ciclo che accede a tutti i punti della point cloud
-   int prog = 0;
-   int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
-   const uint32_t adv = pDesc->getPointCount() / 50;// serve per il progress report
-   acc->toIndex(0);
-   for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
-   {
-	  if (!acc.isValid())
-      {
-         progress.report("Unable to access data.", 0, ERRORS, true);
-         return false;
-      }
+  // // ciclo che accede a tutti i punti della point cloud
+  // int prog = 0;
+  // int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
+  // const uint32_t adv = pDesc->getPointCount() / 50;// serve per il progress report
+  // acc->toIndex(0);
+  // for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
+  // {
+	 // if (!acc.isValid())
+  //    {
+  //       progress.report("Unable to access data.", 0, ERRORS, true);
+  //       return false;
+  //    }
 
-	  if (idx % adv == 0)
-      {
-         progress.report("Calculating extents", ++prog, NORMAL);
-      }
+	 // if (idx % adv == 0)
+  //    {
+  //       progress.report("Calculating extents", ++prog, NORMAL);
+  //    }
 
-      if (!acc->isPointValid())
-      {
-         acc->nextValidPoint();
-         continue;
-      }
+  //    if (!acc->isPointValid())
+  //    {
+  //       acc->nextValidPoint();
+  //       continue;
+  //    }
 
-	  sumX += acc->getXAsDouble(true);
-	  sumY += acc->getYAsDouble(true);
-	  sumZ += acc->getZAsDouble(true);
+	 // points_file << acc->getXAsDouble(true) << '\t' << acc->getYAsDouble(true) << '\t' << acc->getZAsDouble(true) << '\n'; 
 
-	  minX = std::min(minX, acc->getXAsDouble(true));
-      maxX = std::max(maxX, acc->getXAsDouble(true));
+	 // sumX += acc->getXAsDouble(true);
+	 // sumY += acc->getYAsDouble(true);
+	 // sumZ += acc->getZAsDouble(true);
 
-	  minY = std::min(minY, acc->getYAsDouble(true));
-      maxY = std::max(maxY, acc->getYAsDouble(true));
+	 // minX = std::min(minX, acc->getXAsDouble(true));
+  //    maxX = std::max(maxX, acc->getXAsDouble(true));
 
-	  minZ = std::min(minZ, acc->getZAsDouble(true));
-      maxZ = std::max(maxZ, acc->getZAsDouble(true));
-	  
-	  points_number ++;
-	  acc->nextValidPoint();//sposta l'accessor al punto successivo
-   }
-   acc->toIndex(0);// because I move the acccessor to the first element, in the case I need it once more
+	 // minY = std::min(minY, acc->getYAsDouble(true));
+  //    maxY = std::max(maxY, acc->getYAsDouble(true));
 
-   double meanX = sumX / static_cast<double>(points_number);
-   double meanY = sumY / static_cast<double>(points_number);
-   double meanZ = sumZ / static_cast<double>(points_number);
+	 // minZ = std::min(minZ, acc->getZAsDouble(true));
+  //    maxZ = std::max(maxZ, acc->getZAsDouble(true));
+	 // 
+	 // points_number ++;
+	 // acc->nextValidPoint();//sposta l'accessor al punto successivo
+  // }
+  // acc->toIndex(0);// because I move the acccessor to the first element, in the case I need it once more
 
-   // From ASPRS Las Specification
+  // double meanX = sumX / static_cast<double>(points_number);
+  // double meanY = sumY / static_cast<double>(points_number);
+  // double meanZ = sumZ / static_cast<double>(points_number);
 
-   /*X, Y, and Z scale factors: The scale factor fields contain a double floating point value that is used to scale the corresponding X, Y, and Z long values within the point records. 
-   The corresponding X, Y, and Z scale factor must be multiplied by the X, Y, or Z point record value to get the actual X, Y, or Z coordinate. 
-   For example, if the X, Y, and Z coordinates are intended to have two decimal point values, then each scale factor will contain the number 0.01.*/
+  // points_file.close();
 
-  /* X, Y, and Z offset: The offset fields should be used to set the overall offset for the point records. 
-   In general these numbers will be zero, but for certain cases the resolution of the point data may not be large enough for a given projection system. 
-   However, it should always be assumed that these numbers are used. So to scale a given X from the point record, take the point record X multiplied by the X scale factor, and then add the X offset.
-   Xcoordinate = (Xrecord * Xscale) + Xoffset
-   Ycoordinate = (Yrecord * Yscale) + Yoffset
-   Zcoordinate = (Zrecord * Zscale) + Zoffset*/
+  // // From ASPRS Las Specification
 
-   //Max and Min X, Y, Z: The max and min data fields are the actual unscaled extents of the LAS point file data, specified in the coordinate system of the LAS data.
+  // /*X, Y, and Z scale factors: The scale factor fields contain a double floating point value that is used to scale the corresponding X, Y, and Z long values within the point records. 
+  // The corresponding X, Y, and Z scale factor must be multiplied by the X, Y, or Z point record value to get the actual X, Y, or Z coordinate. 
+  // For example, if the X, Y, and Z coordinates are intended to have two decimal point values, then each scale factor will contain the number 0.01.*/
 
-   // VALORI DESUNTI DALL'HEADER DEL LAS FILE (sono immagazzinati nel descriptor): per verifica li confronterò con i valori calcolati considerando tutti i punti della nuvola (ciclo for)
-   unsigned int count = pDesc->getPointCount();
-   double xmin_header = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
-   double xmax_header = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
-   double ymin_header = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
-   double ymax_header = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
-   double zmin_header = pDesc->getZMin() * pDesc->getZScale() + pDesc->getZOffset();
-   double zmax_header = pDesc->getZMax() * pDesc->getZScale() + pDesc->getZOffset();
+  ///* X, Y, and Z offset: The offset fields should be used to set the overall offset for the point records. 
+  // In general these numbers will be zero, but for certain cases the resolution of the point data may not be large enough for a given projection system. 
+  // However, it should always be assumed that these numbers are used. So to scale a given X from the point record, take the point record X multiplied by the X scale factor, and then add the X offset.
+  // Xcoordinate = (Xrecord * Xscale) + Xoffset
+  // Ycoordinate = (Yrecord * Yscale) + Yoffset
+  // Zcoordinate = (Zrecord * Zscale) + Zoffset*/
 
-    std::string msg = "\nScale along x: " + StringUtilities::toDisplayString(pDesc->getXScale()) +"\n"+
-		              "Offset along x: " + StringUtilities::toDisplayString(pDesc->getXOffset()) + "\n"+
+  // //Max and Min X, Y, Z: The max and min data fields are the actual unscaled extents of the LAS point file data, specified in the coordinate system of the LAS data.
 
-		              "Maximum value along x: " + StringUtilities::toDisplayString(maxX) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(xmax_header) + "\n"+
-                      "Minimum value along x: " + StringUtilities::toDisplayString(minX) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(xmin_header) + "\n"+
-					  "Avrage along x: "+ StringUtilities::toDisplayString(meanX)+ "\n"+"\n"+
-					  
-					  "Scale along y: " + StringUtilities::toDisplayString(pDesc->getYScale()) +"\n"+
-		              "Offset along y: " + StringUtilities::toDisplayString(pDesc->getYOffset()) + "\n"+
+  // // VALORI DESUNTI DALL'HEADER DEL LAS FILE (sono immagazzinati nel descriptor): per verifica li confronterò con i valori calcolati considerando tutti i punti della nuvola (ciclo for)
+  // unsigned int count = pDesc->getPointCount();
+  // double xmin_header = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
+  // double xmax_header = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
+  // double ymin_header = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
+  // double ymax_header = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
+  // double zmin_header = pDesc->getZMin() * pDesc->getZScale() + pDesc->getZOffset();
+  // double zmax_header = pDesc->getZMax() * pDesc->getZScale() + pDesc->getZOffset();
 
-					  "Maximum value along y: " + StringUtilities::toDisplayString(maxY) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(ymax_header) + "\n"+
-                      "Minimum value along y: " + StringUtilities::toDisplayString(minY) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(ymin_header) + "\n"+
-					  "Avrage along y: "+ StringUtilities::toDisplayString(meanY)+ "\n"+"\n"+
-					  
-					  "Scale along z: " + StringUtilities::toDisplayString(pDesc->getZScale()) +"\n"+
-		              "Offset along z: " + StringUtilities::toDisplayString(pDesc->getZOffset()) + "\n"+
+  //  std::string msg = "\nScale along x: " + StringUtilities::toDisplayString(pDesc->getXScale()) +"\n"+
+		//              "Offset along x: " + StringUtilities::toDisplayString(pDesc->getXOffset()) + "\n"+
 
-					  "Maximum value along z: " + StringUtilities::toDisplayString(maxZ) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(zmax_header) + "\n"+
-					  "Minimum value along z: " + StringUtilities::toDisplayString(minZ) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(zmin_header) + "\n"+
-					  "Average along z: "+ StringUtilities::toDisplayString(meanZ)+ "\n"+"\n"+
-					  
-					  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(count);
+		//              "Maximum value along x: " + StringUtilities::toDisplayString(maxX) + "\n"+
+		//              "Verify with the header: "+ StringUtilities::toDisplayString(xmax_header) + "\n"+
+  //                    "Minimum value along x: " + StringUtilities::toDisplayString(minX) + "\n"+
+		//			  "Verify with the header: "+ StringUtilities::toDisplayString(xmin_header) + "\n"+
+		//			  "Avrage along x: "+ StringUtilities::toDisplayString(meanX)+ "\n"+"\n"+
+		//			  
+		//			  "Scale along y: " + StringUtilities::toDisplayString(pDesc->getYScale()) +"\n"+
+		//              "Offset along y: " + StringUtilities::toDisplayString(pDesc->getYOffset()) + "\n"+
+
+		//			  "Maximum value along y: " + StringUtilities::toDisplayString(maxY) + "\n"+
+		//              "Verify with the header: "+ StringUtilities::toDisplayString(ymax_header) + "\n"+
+  //                    "Minimum value along y: " + StringUtilities::toDisplayString(minY) + "\n"+
+		//			  "Verify with the header: "+ StringUtilities::toDisplayString(ymin_header) + "\n"+
+		//			  "Avrage along y: "+ StringUtilities::toDisplayString(meanY)+ "\n"+"\n"+
+		//			  
+		//			  "Scale along z: " + StringUtilities::toDisplayString(pDesc->getZScale()) +"\n"+
+		//              "Offset along z: " + StringUtilities::toDisplayString(pDesc->getZOffset()) + "\n"+
+
+		//			  "Maximum value along z: " + StringUtilities::toDisplayString(maxZ) + "\n"+
+		//              "Verify with the header: "+ StringUtilities::toDisplayString(zmax_header) + "\n"+
+		//			  "Minimum value along z: " + StringUtilities::toDisplayString(minZ) + "\n"+
+		//			  "Verify with the header: "+ StringUtilities::toDisplayString(zmin_header) + "\n"+
+		//			  "Average along z: "+ StringUtilities::toDisplayString(meanZ)+ "\n"+"\n"+
+		//			  
+		//			  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
+		//			  "Verify with the header: "+ StringUtilities::toDisplayString(count);
 	
+  progress.report("Calculating", 0, NORMAL);
+
+   double minX, maxX;
+   int  count;
+
    pOutArgList->setPlugInArgValue("Minimum", &minX);
    pOutArgList->setPlugInArgValue("Maximum", &maxX);
    pOutArgList->setPlugInArgValue("Count", &count);
    
    Ransac prova = Ransac();
    
+   progress.report("Calculating point cloud statistics", 10, NORMAL);
+   prova.generate_point_cloud_statistics(pElement);
+   
+   progress.report("Generating DEM", 20, NORMAL);
+   static const float default_post_spacing = 1.f;
+   prova.generate_DEM(pElement, default_post_spacing); 
+  
+
+   progress.report("RANSAC", 40, NORMAL);
    prova.ComputeModel(pElement);
 
+  
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
-   progress.report(msg, 100, NORMAL);
+   progress.report(prova.msg1, 100, NORMAL);
    //progress.report(prova.msg2, 100, NORMAL);
    progress.upALevel();
    return true;

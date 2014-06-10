@@ -4,6 +4,8 @@
 
 Ransac::Ransac(void)
 {
+	//path = "$(OPTICKS_CODE_DIR)/application/PlugIns/src/LiDAR/Results/";
+    path = "C:/Users/Roberta/Desktop/Results/";
 }
 
 
@@ -76,6 +78,11 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	//needed to the optimizeModelCoefficients method
 	nr_p = n_best_inliers_count;
 	inliers = final_inliers;
+	
+	//// writing the results on a file
+	std::ofstream RANSAC_results_file;
+	RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
+    RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
 
 	msg2 += "------RANSAC final results-------\n";
 	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
@@ -84,14 +91,18 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 			final_model_coefficients = optimized_coefficients;
     }
 	
-	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+" on "+StringUtilities::toDisplayString(k)+" needed\n\n";
+	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+" on " + StringUtilities::toDisplayString(k) + " needed\n\n";
 	msg2 += "inliers found:  " + StringUtilities::toDisplayString(n_best_inliers_count)+"\n";
 	for(size_t i = 0; i < n_best_inliers_count; i++)
 	{
 		msg2 +=  StringUtilities::toDisplayString(final_inliers[i])+" ";
+	    RANSAC_results_file << final_inliers[i] << '\t'; 
 	}
 
 	msg2 += "\n\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
+	RANSAC_results_file.close();
+	
 	return true;
 }
 
@@ -224,7 +235,6 @@ bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 		return true;
 }
 
-
 bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 {
 	  std::vector<double> distances; 
@@ -265,7 +275,6 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 	  //msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found\n\n";
 	return true;
 }
-
 
 bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 {
@@ -471,3 +480,217 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     roots (2) = 0.5f * (b + sd);
     roots (1) = 0.5f * (b - sd);
   }
+
+bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing)
+{
+	   std::ofstream dem_file;
+	   dem_file.open (std::string(path) + "DEM.txt");
+       dem_file << "DEM\n";
+
+	   /* Main processing loop */
+	   FactoryResource<PointCloudDataRequest> req;
+	   req->setWritable(true);
+	   PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
+	   if (!acc.isValid())
+	   {
+		  msg2 += "Unable to write to point cloud.";
+		  return false;
+	   }
+	   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
+	   double xMin = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
+	   double xMax = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
+	   double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
+	   double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
+
+	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));
+	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing));
+	   xMax = xMin + mDim * post_spacing;
+	   yMin = yMax - nDim * post_spacing;
+	   
+	   // create an output raster for the DEM
+	   Eigen::MatrixXf dem;
+	   const float badVal = -9999.f;
+	   dem.setConstant(nDim, mDim, badVal);
+
+	   int prog = 0;
+	   uint32_t adv = pDesc->getPointCount() / 100;
+	   for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
+	   {
+		  if (!acc.isValid())
+		  {
+			 msg2 += "Unable to access data.";
+			 return false;
+		  }
+		  if (idx % adv == 0)
+		  {
+			 //progress.report("Generating DEM", ++prog, NORMAL);
+		  }
+		  if (!acc->isPointValid())
+		  {
+			 acc->nextValidPoint();
+			 continue;
+		  }
+		  double x = acc->getXAsDouble(true);
+		  double y = acc->getYAsDouble(true);
+		  float z = static_cast<float>(acc->getZAsDouble(true));
+		  // calculate nearest DEM point
+		  int xIndex = std::max(0, static_cast<int>(std::floor((x - xMin) / post_spacing)));
+		  int yIndex = std::max(0, static_cast<int>(std::floor((yMax - y) / post_spacing)));
+		  float demVal = dem(yIndex, xIndex);
+		  if (demVal == badVal || demVal < z)
+		  {
+			 dem(yIndex, xIndex) = z;
+			 dem_file << xIndex << '\t' << yIndex<< '\t' << z << '\n';  
+		  }
+
+		  acc->nextValidPoint();
+	   }
+
+	   dem_file.close();
+	   
+	   return true;
+}
+
+bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
+{
+   std::string path = "C:/Users/Roberta/Desktop/Results/";
+   std::ofstream points_file;
+   points_file.open (std::string(path)+"Points.txt");
+   points_file << "Point cloud points\n";
+	
+	/* Main processing loop */
+   FactoryResource<PointCloudDataRequest> req;
+   req->setWritable(true);
+   PointCloudAccessor acc = PointCloudAccessor (pElement->getPointCloudAccessor(req.release()));
+   if (!acc.isValid())
+   {
+      //progress.report("Unable to write to point cloud.", 0, ERRORS, true);
+      return false;
+   }
+   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
+
+   // inizializza il min e il max con il valore più alto e più basso possibile
+   double minX, maxX, minY, maxY, minZ, maxZ;
+   minX = minY = minZ = std::numeric_limits<double>::max(); //numero molto grande: facile trovarne uno più piccolo
+   maxX = maxY = maxZ = -minX; //numero molto piccolo: facile trovarne uno più grande
+   double sumX, sumY, sumZ; // servono per la media
+   sumX = sumY = sumZ = 0;
+
+   std::vector<double> x_coordinates  =  std::vector<double> (pDesc->getPointCount());
+   std::vector<double> y_coordinates  =  std::vector<double> (pDesc->getPointCount());
+   std::vector<double> z_coordinates  =  std::vector<double> (pDesc->getPointCount());
+
+   // ciclo che accede a tutti i punti della point cloud
+   int prog = 0;
+   int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
+   const uint32_t adv = pDesc->getPointCount() / 50;// serve per il progress report
+   acc->toIndex(0);
+   for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
+   {
+	  if (!acc.isValid())
+      {
+        // progress.report("Unable to access data.", 0, ERRORS, true);
+         return false;
+      }
+
+	  if (idx % adv == 0)
+      {
+         //progress.report("Calculating extents", ++prog, NORMAL);
+      }
+
+      if (!acc->isPointValid())
+      {
+         acc->nextValidPoint();
+         continue;
+      }
+
+	  points_file << acc->getXAsDouble(true) << '\t' << acc->getYAsDouble(true) << '\t' << acc->getZAsDouble(true) << '\n'; 
+
+	  sumX += acc->getXAsDouble(true);
+	  sumY += acc->getYAsDouble(true);
+	  sumZ += acc->getZAsDouble(true);
+
+	  minX = std::min(minX, acc->getXAsDouble(true));
+      maxX = std::max(maxX, acc->getXAsDouble(true));
+
+	  minY = std::min(minY, acc->getYAsDouble(true));
+      maxY = std::max(maxY, acc->getYAsDouble(true));
+
+	  minZ = std::min(minZ, acc->getZAsDouble(true));
+      maxZ = std::max(maxZ, acc->getZAsDouble(true));
+	  
+	  points_number ++;
+	  acc->nextValidPoint();//sposta l'accessor al punto successivo
+   }
+   acc->toIndex(0);// because I move the acccessor to the first element, in the case I need it once more
+
+   double meanX = sumX / static_cast<double>(points_number);
+   double meanY = sumY / static_cast<double>(points_number);
+   double meanZ = sumZ / static_cast<double>(points_number);
+
+   points_file.close();
+
+   // From ASPRS Las Specification
+
+   /*X, Y, and Z scale factors: The scale factor fields contain a double floating point value that is used to scale the corresponding X, Y, and Z long values within the point records. 
+   The corresponding X, Y, and Z scale factor must be multiplied by the X, Y, or Z point record value to get the actual X, Y, or Z coordinate. 
+   For example, if the X, Y, and Z coordinates are intended to have two decimal point values, then each scale factor will contain the number 0.01.*/
+
+  /* X, Y, and Z offset: The offset fields should be used to set the overall offset for the point records. 
+   In general these numbers will be zero, but for certain cases the resolution of the point data may not be large enough for a given projection system. 
+   However, it should always be assumed that these numbers are used. So to scale a given X from the point record, take the point record X multiplied by the X scale factor, and then add the X offset.
+   Xcoordinate = (Xrecord * Xscale) + Xoffset
+   Ycoordinate = (Yrecord * Yscale) + Yoffset
+   Zcoordinate = (Zrecord * Zscale) + Zoffset*/
+
+   //Max and Min X, Y, Z: The max and min data fields are the actual unscaled extents of the LAS point file data, specified in the coordinate system of the LAS data.
+
+   // VALORI DESUNTI DALL'HEADER DEL LAS FILE (sono immagazzinati nel descriptor): per verifica li confronterò con i valori calcolati considerando tutti i punti della nuvola (ciclo for)
+   unsigned int count = pDesc->getPointCount();
+   double xmin_header = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
+   double xmax_header = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
+   double ymin_header = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
+   double ymax_header = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
+   double zmin_header = pDesc->getZMin() * pDesc->getZScale() + pDesc->getZOffset();
+   double zmax_header = pDesc->getZMax() * pDesc->getZScale() + pDesc->getZOffset();
+
+   msg1 = "\nScale along x: " + StringUtilities::toDisplayString(pDesc->getXScale()) +"\n"+
+		              "Offset along x: " + StringUtilities::toDisplayString(pDesc->getXOffset()) + "\n"+
+
+		              "Maximum value along x: " + StringUtilities::toDisplayString(maxX) + "\n"+
+		              "Verify with the header: "+ StringUtilities::toDisplayString(xmax_header) + "\n"+
+                      "Minimum value along x: " + StringUtilities::toDisplayString(minX) + "\n"+
+					  "Verify with the header: "+ StringUtilities::toDisplayString(xmin_header) + "\n"+
+					  "Avrage along x: "+ StringUtilities::toDisplayString(meanX)+ "\n"+"\n"+
+					  
+					  "Scale along y: " + StringUtilities::toDisplayString(pDesc->getYScale()) +"\n"+
+		              "Offset along y: " + StringUtilities::toDisplayString(pDesc->getYOffset()) + "\n"+
+
+					  "Maximum value along y: " + StringUtilities::toDisplayString(maxY) + "\n"+
+		              "Verify with the header: "+ StringUtilities::toDisplayString(ymax_header) + "\n"+
+                      "Minimum value along y: " + StringUtilities::toDisplayString(minY) + "\n"+
+					  "Verify with the header: "+ StringUtilities::toDisplayString(ymin_header) + "\n"+
+					  "Avrage along y: "+ StringUtilities::toDisplayString(meanY)+ "\n"+"\n"+
+					  
+					  "Scale along z: " + StringUtilities::toDisplayString(pDesc->getZScale()) +"\n"+
+		              "Offset along z: " + StringUtilities::toDisplayString(pDesc->getZOffset()) + "\n"+
+
+					  "Maximum value along z: " + StringUtilities::toDisplayString(maxZ) + "\n"+
+		              "Verify with the header: "+ StringUtilities::toDisplayString(zmax_header) + "\n"+
+					  "Minimum value along z: " + StringUtilities::toDisplayString(minZ) + "\n"+
+					  "Verify with the header: "+ StringUtilities::toDisplayString(zmin_header) + "\n"+
+					  "Average along z: "+ StringUtilities::toDisplayString(meanZ)+ "\n"+"\n"+
+					  
+					  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
+					  "Verify with the header: "+ StringUtilities::toDisplayString(count);
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	return true;
+}

@@ -16,7 +16,7 @@ Ransac::~Ransac(void)
 
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
-	double probability_= 0.99;         // probability to pick a sample with 0 outliers
+	double probability_= 0.99;        // probability that at least one of the random samples of s (for us 3) points is free from outliers
 	int max_iterations_ = 200000;     // safeguard against being stuck in this loop forever
 	nr_p = 0;
 
@@ -65,8 +65,8 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 				final_model_coefficients = model_coefficients;
 				final_inliers = inliers;
 				// Compute the k parameter (k=log(z)/log(1-w^n))
-				double w = static_cast<double> (n_best_inliers_count) * one_over_indices;
-				double p_no_outliers = 1.0 - pow (w, static_cast<double> (minimum_model_points));
+				double w = static_cast<double> (n_best_inliers_count) * one_over_indices; // w is the probability that any selected data point is an inlier (e=1-w: probability that a point is an outlier)
+				double p_no_outliers = 1.0 - pow (w, static_cast<double> (minimum_model_points)); // w^3 probability of choosing 3 inliers in a row (sample only contains inliers)
 				p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
 				p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
 				k = log_probability / log (p_no_outliers);
@@ -84,14 +84,14 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
     RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
 
-	msg2 += "------RANSAC final results-------\n";
+	msg2 += "------ RANSAC final results -------\n";
 	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
 	if (optimizeModelCoefficients(acc) == true)
 	{
 			final_model_coefficients = optimized_coefficients;
     }
 	
-	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_)+" on " + StringUtilities::toDisplayString(k) + " needed\n\n";
+	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_) + " on " + StringUtilities::toDisplayString(k) + " needed\n\n";
 	msg2 += "inliers found:  " + StringUtilities::toDisplayString(n_best_inliers_count)+"\n";
 	for(size_t i = 0; i < n_best_inliers_count; i++)
 	{
@@ -612,7 +612,7 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
 
 	  minX = std::min(minX, acc->getXAsDouble(true));
       maxX = std::max(maxX, acc->getXAsDouble(true));
-
+	  
 	  minY = std::min(minY, acc->getYAsDouble(true));
       maxY = std::max(maxY, acc->getYAsDouble(true));
 
@@ -655,41 +655,34 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
    double zmax_header = pDesc->getZMax() * pDesc->getZScale() + pDesc->getZOffset();
 
    msg1 = "\nScale along x: " + StringUtilities::toDisplayString(pDesc->getXScale()) +"\n"+
-		              "Offset along x: " + StringUtilities::toDisplayString(pDesc->getXOffset()) + "\n"+
+		    "Offset along x: " + StringUtilities::toDisplayString(pDesc->getXOffset()) + "\n"+
 
-		              "Maximum value along x: " + StringUtilities::toDisplayString(maxX) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(xmax_header) + "\n"+
-                      "Minimum value along x: " + StringUtilities::toDisplayString(minX) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(xmin_header) + "\n"+
-					  "Avrage along x: "+ StringUtilities::toDisplayString(meanX)+ "\n"+"\n"+
+		    "Maximum value along x: " + StringUtilities::toDisplayString(maxX) + "\n"+
+		    "Verify with the header: "+ StringUtilities::toDisplayString(xmax_header) + "\n"+
+            "Minimum value along x: " + StringUtilities::toDisplayString(minX) + "\n"+
+		    "Verify with the header: "+ StringUtilities::toDisplayString(xmin_header) + "\n"+
+		    "Avrage along x: "+ StringUtilities::toDisplayString(meanX)+ "\n"+"\n"+
 					  
-					  "Scale along y: " + StringUtilities::toDisplayString(pDesc->getYScale()) +"\n"+
-		              "Offset along y: " + StringUtilities::toDisplayString(pDesc->getYOffset()) + "\n"+
+		    "Scale along y: " + StringUtilities::toDisplayString(pDesc->getYScale()) +"\n"+
+		    "Offset along y: " + StringUtilities::toDisplayString(pDesc->getYOffset()) + "\n"+
 
-					  "Maximum value along y: " + StringUtilities::toDisplayString(maxY) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(ymax_header) + "\n"+
-                      "Minimum value along y: " + StringUtilities::toDisplayString(minY) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(ymin_header) + "\n"+
-					  "Avrage along y: "+ StringUtilities::toDisplayString(meanY)+ "\n"+"\n"+
+		   "Maximum value along y: " + StringUtilities::toDisplayString(maxY) + "\n"+
+		   "Verify with the header: "+ StringUtilities::toDisplayString(ymax_header) + "\n"+
+           "Minimum value along y: " + StringUtilities::toDisplayString(minY) + "\n"+
+		   "Verify with the header: "+ StringUtilities::toDisplayString(ymin_header) + "\n"+
+		   "Avrage along y: "+ StringUtilities::toDisplayString(meanY)+ "\n"+"\n"+
 					  
-					  "Scale along z: " + StringUtilities::toDisplayString(pDesc->getZScale()) +"\n"+
-		              "Offset along z: " + StringUtilities::toDisplayString(pDesc->getZOffset()) + "\n"+
+		   "Scale along z: " + StringUtilities::toDisplayString(pDesc->getZScale()) +"\n"+
+	       "Offset along z: " + StringUtilities::toDisplayString(pDesc->getZOffset()) + "\n"+
 
-					  "Maximum value along z: " + StringUtilities::toDisplayString(maxZ) + "\n"+
-		              "Verify with the header: "+ StringUtilities::toDisplayString(zmax_header) + "\n"+
-					  "Minimum value along z: " + StringUtilities::toDisplayString(minZ) + "\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(zmin_header) + "\n"+
-					  "Average along z: "+ StringUtilities::toDisplayString(meanZ)+ "\n"+"\n"+
+		  "Maximum value along z: " + StringUtilities::toDisplayString(maxZ) + "\n"+
+		  "Verify with the header: "+ StringUtilities::toDisplayString(zmax_header) + "\n"+
+		  "Minimum value along z: " + StringUtilities::toDisplayString(minZ) + "\n"+
+		  "Verify with the header: "+ StringUtilities::toDisplayString(zmin_header) + "\n"+
+		  "Average along z: "+ StringUtilities::toDisplayString(meanZ)+ "\n"+"\n"+
 					  
-					  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
-					  "Verify with the header: "+ StringUtilities::toDisplayString(count);
-	
-	
-	
-	
-	
-	
-	
+		  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
+		  "Verify with the header: "+ StringUtilities::toDisplayString(count);
 	
 	
 	return true;

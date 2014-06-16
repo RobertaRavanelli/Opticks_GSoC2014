@@ -24,6 +24,28 @@
 #include "StringUtilities.h"
 #include <iostream>
 #include <fstream>
+// needed by the Raster generator
+#include "DataRequest.h"
+#include "AlgorithmShell.h"
+#include "DesktopServices.h"
+#include "DataAccessor.h"
+#include "DataAccessorImpl.h"
+#include <gdal/gdal.h>
+#include <gdal/gdal_priv.h>
+#include <gdal/gdal_alg.h>
+// needed for buildings outline segmentation
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+namespace
+{
+template<typename T>
+void assign(T* pData, float val)
+{
+   *pData = static_cast<T>(val);
+}
+}
 
 // these methods are needed for eigen values
 template<typename Matrix, typename Roots> inline void
@@ -60,6 +82,7 @@ public:
 	bool Ransac::computeRootsdouble (const Eigen::Matrix3d m, Eigen::Vector3d roots);
 	bool Ransac::computeRoots2double (double b, double c, Eigen::Vector3d roots);
 	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing);
+	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
 };
 

@@ -143,15 +143,17 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    
    Ransac prova = Ransac();
    
-   progress.report("Calculating point cloud statistics", 10, NORMAL);
-   prova.generate_point_cloud_statistics(pElement);
+   //progress.report("Calculating point cloud statistics", 10, NORMAL);
+   //prova.generate_point_cloud_statistics(pElement);
    
-   progress.report("Generating DEM", 20, NORMAL);
-   static const float default_post_spacing = 1.f;
-   prova.generate_DEM(pElement, default_post_spacing); 
-  
+   progress.report("Generating DEM and raster", 20, NORMAL);
+   //post_spacing is the pixel spacing of the dem matrix
+   //static const float post_spacing = 0.1f;
+   static const float post_spacing = 5.0;
+   prova.generate_DEM(pElement, post_spacing); 
+   prova.generate_raster_from_intensity(pElement, post_spacing);
    progress.report("Computing RANSAC", 40, NORMAL);
-   prova.ComputeModel(pElement);
+   //prova.ComputeModel(pElement);
 
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
    progress.report(prova.msg1, 100, NORMAL);

@@ -18,9 +18,6 @@ public:
    Tutorial1();
    virtual ~Tutorial1();
 
-  
-
-
    virtual bool getInputSpecification(PlugInArgList*& pInArgList);
    virtual bool getOutputSpecification(PlugInArgList*& pOutArgList);
    virtual bool execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList);

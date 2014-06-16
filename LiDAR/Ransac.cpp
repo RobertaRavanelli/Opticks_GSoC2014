@@ -481,7 +481,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     roots (1) = 0.5f * (b - sd);
   }
 
-bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing)
+bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //post_spacing is the pixel spacing of the dem matrix
 {
 	   std::ofstream dem_file;
 	   dem_file.open (std::string(path) + "DEM.txt");
@@ -506,7 +506,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing)
 	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing));
 	   xMax = xMin + mDim * post_spacing;
 	   yMin = yMax - nDim * post_spacing;
-	   
+
 	   // create an output raster for the DEM
 	   Eigen::MatrixXf dem;
 	   const float badVal = -9999.f;
@@ -533,6 +533,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing)
 		  double x = acc->getXAsDouble(true);
 		  double y = acc->getYAsDouble(true);
 		  float z = static_cast<float>(acc->getZAsDouble(true));
+		  
 		  // calculate nearest DEM point
 		  int xIndex = std::max(0, static_cast<int>(std::floor((x - xMin) / post_spacing)));
 		  int yIndex = std::max(0, static_cast<int>(std::floor((yMax - y) / post_spacing)));
@@ -540,15 +541,234 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing)
 		  if (demVal == badVal || demVal < z)
 		  {
 			 dem(yIndex, xIndex) = z;
-			 dem_file << xIndex << '\t' << yIndex<< '\t' << z << '\n';  
+			 //dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
 		  }
 
+		  dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
 		  acc->nextValidPoint();
 	   }
 
 	   dem_file.close();
-	   
-	   return true;
+
+	   // GENERATE THE DEM RASTER
+	   RasterElement* pDemOut = RasterUtilities::createRasterElement("DEM", nDim, mDim, FLT4BYTES, true, pElement);
+	   if (pDemOut == NULL)
+	   {
+			//progress.report("Unable to create DEM raster.", 0, ERRORS, true);
+		   msg2 += "Unable to create DEM raster.";
+		   return false;
+	   }
+	   pDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
+	   FactoryResource<DataRequest> pReq;
+	   pReq->setWritable(true);
+	   DataAccessor racc(pDemOut->getDataAccessor(pReq.release()));
+	   for (int row = 0; row < nDim; row++)
+	   {
+			for (int col = 0; col < mDim; col++)
+			{
+			if (!racc.isValid())
+			{
+				//progress.report("Error writing output raster.", 0, ERRORS, true);
+				msg2 += "Error writing output raster.";
+				return false;
+			}
+			*reinterpret_cast<float*>(racc->getColumn()) = dem(row, col);
+			racc->nextColumn();
+			}
+			racc->nextRow();
+	   }
+	   pDemOut->updateData();
+	 
+	   SpatialDataView* pView = ((SpatialDataWindow*)Service<DesktopServices>()->createWindow("DEM_raster", SPATIAL_DATA_WINDOW))->getSpatialDataView();
+       pView->setPrimaryRasterElement(pDemOut);
+       {
+         UndoLock lock(pView);
+         pView->createLayer(RASTER, pDemOut);
+	   }
+	      
+	  // //http://stackoverflow.com/questions/14783329/opencv-cvmat-and-eigenmatrix
+	  cv::Mat image;
+      //image = cv::imread(path+"prova_raster_8bit.tif", 0);   // Read the file in gray
+	  // cv::Mat trhesholded_img;
+	  // 
+	  // 
+	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_64FC1, dem.data());
+	  // 
+	
+  
+	 // cv::imshow( "Display window", image );
+	  // //gray = cv::cvt  cv2.cvtColor(img,cv2.COLOR_BGR2GRAY);
+	  // /// Convert the image to Gray
+   //    cv::cvtColor( CVdem, gray, CV_RGB2GRAY );
+	  // cv::threshold( gray, trhesholded_img, 0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU );
+
+	  // // noise removal
+	  // cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
+	  // cv::Mat opening;
+	  // cv::morphologyEx(trhesholded_img, opening, cv::MORPH_OPEN, kernel,  cv::Point(-1,-1), 2, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue());
+
+	  // // sure background area
+   //    cv::Mat sure_bg;
+	  // cv::dilate(opening, sure_bg, kernel, cv::Point(-1,-1), 20,  cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue());
+
+	  // //Finding sure foreground area; third parameter of distance transform cv::DIST_L2 (euclidean distance)doesn't exist : I try with norm_l2, otherwise I print the value from the python program
+	  // cv::Mat dist_transform;
+	  // cv::distanceTransform(opening, dist_transform, cv::NORM_L2, 0);
+   //    cv::Mat sure_fg;
+	  // double minVal; 
+   //    double max_dist_transform ; 
+   //    cv::Point minLoc; 
+   //    cv::Point maxLoc;  
+	  // cv::minMaxLoc( dist_transform, &minVal, &max_dist_transform, &minLoc, &maxLoc );
+	  // //double max_dist_transform = std::max_element(dist_transform.begin<double>(),dist_transform.end<double>());
+	  // cv::threshold( dist_transform, sure_fg, 0.7 * max_dist_transform, 255, 0);
+	  //
+	  // // Finding unknown region
+	  // cv::Mat unknown;
+	  // cv::subtract(sure_bg, sure_fg, unknown);
+
+	  // // Marker labelling
+   //    //ret, markers = cv2.connectedComponents(sure_fg)
+	 
+	  ////cv::findContours(
+	  ////cv::Mat markers;
+	  //cv::Mat markers(trhesholded_img.size(),CV_8U,cv::Scalar(0));
+	  //markers = sure_bg + sure_fg;
+	  //cv::watershed(CVdem, markers);
+	  return true;
+}
+
+bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing)
+{
+	   /* Main processing loop */
+	   FactoryResource<PointCloudDataRequest> req;
+	   req->setWritable(true);
+	   PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
+	   if (!acc.isValid())
+	   {
+		  msg2 += "Unable to write to point cloud.";
+		  return false;
+	   }
+	   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
+	   double xMin = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
+	   double xMax = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
+	   double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
+	   double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
+
+	   double minI = std::numeric_limits<double>::max();
+       double maxI = -minI;
+
+	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));
+	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing));
+	   xMax = xMin + mDim * post_spacing;
+	   yMin = yMax - nDim * post_spacing;
+
+	   // create an output raster for the DEM
+	   Eigen::MatrixXf intensity_raster;
+	   const float badVal = -9999.f;
+	   intensity_raster.setConstant(nDim, mDim, badVal);
+
+	   int prog = 0;
+	   uint32_t adv = pDesc->getPointCount() / 100;
+	   for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
+	   {
+		  if (!acc.isValid())
+		  {
+			 msg2 += "Unable to access data.";
+			 return false;
+		  }
+		  if (idx % adv == 0)
+		  {
+			 //progress.report("Generating DEM", ++prog, NORMAL);
+		  }
+		  if (!acc->isPointValid())
+		  {
+			 acc->nextValidPoint();
+			 continue;
+		  }
+		
+		  double i = acc->getIntensityAsDouble();
+          minI = std::min(minI, i);
+          maxI = std::max(maxI, i);
+
+		  acc->nextValidPoint();
+	   }
+
+	  acc->toIndex(0);
+	  maxI -= minI;
+
+	  for (size_t idx = 0; idx < pDesc->getPointCount(); ++idx)
+      {
+      if (!acc.isValid())
+      {
+         //progress.report("Unable to access data.", 0, ERRORS, true);
+         return false;
+      }
+      if (idx % adv == 0)
+      {
+         //progress.report("Calculating extents", ++prog, NORMAL);
+      }
+      if (!acc->isPointValid())
+      {
+         acc->nextValidPoint();
+         continue;
+      }
+	  double x = acc->getXAsDouble(true);
+	  double y = acc->getYAsDouble(true);
+      double i = acc->getIntensityAsDouble();
+      i -= minI;
+      i /= maxI;
+      int bin = static_cast<int>(i / (1. / 255.));
+      bin = std::min(std::max(bin,0),255); // clamp in case of rounding error
+
+	  // calculate nearest DEM point
+      int xIndex = std::max(0, static_cast<int>(std::floor((x - xMin) / post_spacing)));
+      int yIndex = std::max(0, static_cast<int>(std::floor((yMax - y) / post_spacing)));
+      float demVal = intensity_raster(yIndex, xIndex);
+      if (demVal == badVal || demVal < bin)
+      {
+         intensity_raster(yIndex, xIndex) = static_cast<float> (bin);
+      }
+	 
+      acc->nextValidPoint();
+      }
+
+	   RasterElement* pIntOut = RasterUtilities::createRasterElement("intensity_raster", nDim, mDim, FLT4BYTES, true, pElement);
+	   if (pIntOut == NULL)
+	   {
+			//progress.report("Unable to create DEM raster.", 0, ERRORS, true);
+		   msg2 += "Unable to create DEM raster.";
+		   return false;
+	   }
+	   pIntOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
+	   FactoryResource<DataRequest> pReq;
+	   pReq->setWritable(true);
+	   DataAccessor racc(pIntOut->getDataAccessor(pReq.release()));
+	   for (int row = 0; row < nDim; row++)
+	   {
+			for (int col = 0; col < mDim; col++)
+			{
+			if (!racc.isValid())
+			{
+				//progress.report("Error writing output raster.", 0, ERRORS, true);
+				msg2 += "Error writing output raster.";
+				return false;
+			}
+			*reinterpret_cast<float*>(racc->getColumn()) = intensity_raster(row, col);
+			racc->nextColumn();
+			}
+			racc->nextRow();
+	   }
+	   pIntOut->updateData();
+	 
+	   SpatialDataView* pView = ((SpatialDataWindow*)Service<DesktopServices>()->createWindow("Intensity_raster", SPATIAL_DATA_WINDOW))->getSpatialDataView();
+       pView->setPrimaryRasterElement(pIntOut);
+       {
+         UndoLock lock(pView);
+         pView->createLayer(RASTER, pIntOut);
+	   }
+	
+	return true;
 }
 
 bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)

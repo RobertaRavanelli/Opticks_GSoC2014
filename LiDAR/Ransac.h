@@ -37,6 +37,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/core_c.h>
+#include <opencv2/core/eigen.hpp>
+
+
 
 namespace
 {
@@ -84,5 +88,6 @@ public:
 	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
+	bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
 };
 

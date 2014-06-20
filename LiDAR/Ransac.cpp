@@ -502,15 +502,18 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	   double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
 	   double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
 
-	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));
-	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing));
+	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));  //column
+	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing)); //rows
 	   xMax = xMin + mDim * post_spacing;
 	   yMin = yMax - nDim * post_spacing;
 
 	   // create an output raster for the DEM
 	   Eigen::MatrixXf dem;
+	   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> demRM;// dem stored in a Row major eigen matrix
+
 	   const float badVal = -9999.f;
 	   dem.setConstant(nDim, mDim, badVal);
+	   demRM.setConstant(nDim, mDim, badVal);
 
 	   int prog = 0;
 	   uint32_t adv = pDesc->getPointCount() / 100;
@@ -541,6 +544,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 		  if (demVal == badVal || demVal < z)
 		  {
 			 dem(yIndex, xIndex) = z;
+			 demRM(yIndex, xIndex) = z;
 			 //dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
 		  }
 
@@ -585,56 +589,96 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
          UndoLock lock(pView);
          pView->createLayer(RASTER, pDemOut);
 	   }
-	      
-	  // //http://stackoverflow.com/questions/14783329/opencv-cvmat-and-eigenmatrix
-	  cv::Mat image;
-      //image = cv::imread(path+"prova_raster_8bit.tif", 0);   // Read the file in gray
-	  // cv::Mat trhesholded_img;
-	  // 
-	  // 
-	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_64FC1, dem.data());
-	  // 
-	
-  
-	 // cv::imshow( "Display window", image );
-	  // //gray = cv::cvt  cv2.cvtColor(img,cv2.COLOR_BGR2GRAY);
-	  // /// Convert the image to Gray
-   //    cv::cvtColor( CVdem, gray, CV_RGB2GRAY );
-	  // cv::threshold( gray, trhesholded_img, 0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU );
+	   
 
-	  // // noise removal
-	  // cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
-	  // cv::Mat opening;
-	  // cv::morphologyEx(trhesholded_img, opening, cv::MORPH_OPEN, kernel,  cv::Point(-1,-1), 2, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue());
+	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
+	  cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::ColMajor);//,Eigen::RowMajor); 
+	  cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
+	  
+	  //cv::transpose(CVdem, CVdem);
 
-	  // // sure background area
-   //    cv::Mat sure_bg;
-	  // cv::dilate(opening, sure_bg, kernel, cv::Point(-1,-1), 20,  cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue());
+	 cv::imshow("dem as seen by OpenCV",CVdem);
+	 cv::namedWindow("dem Row Major as seen by OpenCV", CV_WINDOW_NORMAL);
+	 cv::imshow("dem Row Major as seen by OpenCV",CVdemRM);
+	 // cv::imshow("dem as seen by OpenCV",CVdem);
 
-	  // //Finding sure foreground area; third parameter of distance transform cv::DIST_L2 (euclidean distance)doesn't exist : I try with norm_l2, otherwise I print the value from the python program
-	  // cv::Mat dist_transform;
-	  // cv::distanceTransform(opening, dist_transform, cv::NORM_L2, 0);
-   //    cv::Mat sure_fg;
-	  // double minVal; 
-   //    double max_dist_transform ; 
-   //    cv::Point minLoc; 
-   //    cv::Point maxLoc;  
-	  // cv::minMaxLoc( dist_transform, &minVal, &max_dist_transform, &minLoc, &maxLoc );
-	  // //double max_dist_transform = std::max_element(dist_transform.begin<double>(),dist_transform.end<double>());
-	  // cv::threshold( dist_transform, sure_fg, 0.7 * max_dist_transform, 255, 0);
-	  //
-	  // // Finding unknown region
-	  // cv::Mat unknown;
-	  // cv::subtract(sure_bg, sure_fg, unknown);
 
-	  // // Marker labelling
-   //    //ret, markers = cv2.connectedComponents(sure_fg)
+	  cv::Mat CVdem8U;
+	  CVdemRM.convertTo(CVdem8U, CV_8U);
+	  cv::imshow("dem int as seen by OpenCV",CVdem8U);
+
+	  cv::Mat tile = CVdem8U(cv::Rect(10,85,150,145));
+	  cv::imshow("tile as seen by OpenCV", tile);
+	  
+	  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
+
+	  cv::imshow("binary as seen by OpenCV", tile);
+	  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,Eigen::RowMajor>> boh(dem., dem.rows(), dem.cols());
 	 
-	  ////cv::findContours(
-	  ////cv::Mat markers;
-	  //cv::Mat markers(trhesholded_img.size(),CV_8U,cv::Scalar(0));
-	  //markers = sure_bg + sure_fg;
-	  //cv::watershed(CVdem, markers);
+
+
+
+	//  cv::Mat median_image;
+	//  cv::medianBlur (CVdem, median_image, 5);
+
+	//  Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
+	//  draw_raster ("Median filtered raster", median_Eigen, pElement);
+ //    
+	//  // I need something like that http://stackoverflow.com/questions/14539498/change-type-of-mat-object-from-cv-32f-to-cv-8u or that http://www.cs.iit.edu/~agam/cs512/lect-notes/opencv-intro/opencv-intro.html#SECTION00054000000000000000
+	//  cv::Mat tile = CVdem(cv::Rect(0,0,200,447));
+	//  //cv::Mat tile = CVdem(cv::Rect(50,50,150,400));
+	//  //cv::Mat tile = CVdem(cv::Rect(0,0,CVdem.cols,CVdem.rows));
+
+	//  Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> EigTile(tile.ptr<float>(), tile.rows, tile.cols);
+	//  draw_raster ("tile", EigTile, pElement);
+	//  //cv::imwrite(path + "my_roi.png",CVdem);
+	// 
+
+	//  double minVal; 
+	//  double maxVal ; 
+ //     cv::Point minLoc; 
+ //     cv::Point maxLoc;  
+	//  cv::minMaxLoc(tile, &minVal, &maxVal, &minLoc, &maxLoc);
+	//  double min;
+ //     double max;
+ //     cv::minMaxIdx(tile, &min, &max);
+
+
+	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
+	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_OTSU);
+	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_BINARY);//cv::THRESH_BINARY_INV + cv::THRESH_OTSU );
+
+	// 
+	///*  tile.convertTo(tile, CV_8U, 255.0/(max-min), -255.0*min/(max-min));
+	//  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);*/
+
+	//  tile.convertTo(tile, CV_8U);
+	//  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
+	//    
+
+
+	//  //tile.convertTo(tile, CV_32FC1);
+	//  
+	//  
+	// 
+	//  //generate_raster ("boh", median_Eigen, pElement );
+
+	//  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,Eigen::RowMajor>> median_Eigen(tile.ptr<float>(), tile.rows, tile.cols);
+
+
+	//  //tile.convertTo(tile, CV_8U);
+	//  //Eigen::Map<Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(tile.ptr<int>(), tile.rows, tile.cols);
+	//  
+	//
+
+ //     // Map the OpenCV matrix with Eigen:
+ //     //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
+
+	//  ////////// this is to verify if I obtain back (eigen -> openCV -> eigen) the same raster: the test goes well
+	//  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(CVdem.ptr<float>(), CVdem.rows, CVdem.cols);
+
+
+	  cv::waitKey(0);
 	  return true;
 }
 
@@ -904,6 +948,48 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
 		  "Number of points in the pont cloud: " + StringUtilities::toDisplayString(points_number)+"\n"+
 		  "Verify with the header: "+ StringUtilities::toDisplayString(count);
 	
+	
+	return true;
+}
+
+bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement)
+{
+	const float badVal = -9999.f;
+	
+	RasterElement* pMedianDemOut = RasterUtilities::createRasterElement(name,  static_cast<int>(median_Eigen.rows()), static_cast<int>(median_Eigen.cols()), FLT4BYTES, true, pElement);
+	   if (pMedianDemOut == NULL)
+	   {
+		   msg2 += "Unable to create DEM raster.";
+		   return false;
+	   }
+	   pMedianDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
+	   FactoryResource<DataRequest> pReq2;
+	   pReq2->setWritable(true);
+	   DataAccessor racc2(pMedianDemOut->getDataAccessor(pReq2.release()));
+	
+	   for (int row = 0; row < median_Eigen.rows(); row++)
+	   {
+			for (int col = 0; col < median_Eigen.cols(); col++)
+			{
+			if (!racc2.isValid())
+			{
+				msg2 += "Error writing output raster.";
+				return false;
+			}
+			*reinterpret_cast<float*>(racc2->getColumn()) = median_Eigen(row, col);
+			//*reinterpret_cast<int*>(racc2->getColumn()) = median_Eigen(row, col);
+			racc2->nextColumn();
+			}
+			racc2->nextRow();
+	   }
+	   pMedianDemOut->updateData();
+	 
+	   SpatialDataView* pView2 = ((SpatialDataWindow*)Service<DesktopServices>()->createWindow(name, SPATIAL_DATA_WINDOW))->getSpatialDataView();
+       pView2->setPrimaryRasterElement(pMedianDemOut);
+       {
+         UndoLock lock(pView2);
+         pView2->createLayer(RASTER, pMedianDemOut);
+	   }
 	
 	return true;
 }

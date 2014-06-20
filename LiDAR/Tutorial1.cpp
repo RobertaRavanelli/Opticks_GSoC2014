@@ -151,7 +151,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    //static const float post_spacing = 0.1f;
    static const float post_spacing = 5.0;
    prova.generate_DEM(pElement, post_spacing); 
-   prova.generate_raster_from_intensity(pElement, post_spacing);
+   //prova.generate_raster_from_intensity(pElement, post_spacing);
    progress.report("Computing RANSAC", 40, NORMAL);
    //prova.ComputeModel(pElement);
 

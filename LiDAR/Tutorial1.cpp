@@ -6,7 +6,7 @@
  * The license text is available from   
  * http://www.gnu.org/licenses/lgpl.html
  */
-
+  
 #include "AppVerify.h"
 #include "PlugInArgList.h"
 #include "PlugInManagerServices.h"

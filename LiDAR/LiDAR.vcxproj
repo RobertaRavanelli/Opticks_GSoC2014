@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?> 
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -150,7 +150,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\GSoC_2014_Opticks\opticks-sdk20140410\Dependencies\eigen-eigen-6b38706d90a9;$(OPTICKSDEPENDENCIESINCLUDE)\gdal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Roberta\Desktop\Universita\GSoC_2014_Opticks\opticks_sdk_20140410\Dependencies\eigen;$(OPTICKSDEPENDENCIESINCLUDE)\gdal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

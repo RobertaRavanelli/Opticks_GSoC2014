@@ -1,5 +1,5 @@
 #include "Ransac.h"
-
+  
 
 
 Ransac::Ransac(void)
@@ -508,11 +508,11 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	   yMin = yMax - nDim * post_spacing;
 
 	   // create an output raster for the DEM
-	   Eigen::MatrixXf dem;
+	   //Eigen::MatrixXf dem;
 	   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> demRM;// dem stored in a Row major eigen matrix
 
 	   const float badVal = -9999.f;
-	   dem.setConstant(nDim, mDim, badVal);
+	   //dem.setConstant(nDim, mDim, badVal);
 	   demRM.setConstant(nDim, mDim, badVal);
 
 	   int prog = 0;
@@ -540,143 +540,57 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 		  // calculate nearest DEM point
 		  int xIndex = std::max(0, static_cast<int>(std::floor((x - xMin) / post_spacing)));
 		  int yIndex = std::max(0, static_cast<int>(std::floor((yMax - y) / post_spacing)));
-		  float demVal = dem(yIndex, xIndex);
+		  //float demVal = dem(yIndex, xIndex);
+		  float demVal = demRM(yIndex, xIndex);
 		  if (demVal == badVal || demVal < z)
 		  {
-			 dem(yIndex, xIndex) = z;
-			 demRM(yIndex, xIndex) = z;
-			 //dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
+			 //dem(yIndex, xIndex) = z;
+			 demRM(yIndex, xIndex) = z; 
 		  }
 
-		  dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
+		  //dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
+		  dem_file << xIndex << '\t' << yIndex<< '\t' << demRM(yIndex, xIndex) << '\n';  
 		  acc->nextValidPoint();
 	   }
 
 	   dem_file.close();
 
 	   // GENERATE THE DEM RASTER
-	   RasterElement* pDemOut = RasterUtilities::createRasterElement("DEM", nDim, mDim, FLT4BYTES, true, pElement);
-	   if (pDemOut == NULL)
-	   {
-			//progress.report("Unable to create DEM raster.", 0, ERRORS, true);
-		   msg2 += "Unable to create DEM raster.";
-		   return false;
-	   }
-	   pDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
-	   FactoryResource<DataRequest> pReq;
-	   pReq->setWritable(true);
-	   DataAccessor racc(pDemOut->getDataAccessor(pReq.release()));
-	   for (int row = 0; row < nDim; row++)
-	   {
-			for (int col = 0; col < mDim; col++)
-			{
-			if (!racc.isValid())
-			{
-				//progress.report("Error writing output raster.", 0, ERRORS, true);
-				msg2 += "Error writing output raster.";
-				return false;
-			}
-			*reinterpret_cast<float*>(racc->getColumn()) = dem(row, col);
-			racc->nextColumn();
-			}
-			racc->nextRow();
-	   }
-	   pDemOut->updateData();
-	 
-	   SpatialDataView* pView = ((SpatialDataWindow*)Service<DesktopServices>()->createWindow("DEM_raster", SPATIAL_DATA_WINDOW))->getSpatialDataView();
-       pView->setPrimaryRasterElement(pDemOut);
-       {
-         UndoLock lock(pView);
-         pView->createLayer(RASTER, pDemOut);
-	   }
+	   draw_raster ("DEM raster", demRM, pElement);
 	   
 
 	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
-	  cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::ColMajor);//,Eigen::RowMajor); 
+	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::ColMajor);//,Eigen::RowMajor); 
 	  cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
 	  
-	  //cv::transpose(CVdem, CVdem);
+	 //cv::imshow("dem as seen by OpenCV",CVdem);
+	 cv::namedWindow("dem Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
+	 cv::Mat CVdemRM8U;
+	 CVdemRM.convertTo(CVdemRM8U, CV_8U);
+	 cv::imshow("dem Row Major as seen by OpenCV CV_8U",CVdemRM8U);
 
-	 cv::imshow("dem as seen by OpenCV",CVdem);
-	 cv::namedWindow("dem Row Major as seen by OpenCV", CV_WINDOW_NORMAL);
-	 cv::imshow("dem Row Major as seen by OpenCV",CVdemRM);
-	 // cv::imshow("dem as seen by OpenCV",CVdem);
-
-
-	  cv::Mat CVdem8U;
-	  CVdemRM.convertTo(CVdem8U, CV_8U);
-	  cv::imshow("dem int as seen by OpenCV",CVdem8U);
-
-	  cv::Mat tile = CVdem8U(cv::Rect(10,85,150,145));
-	  cv::imshow("tile as seen by OpenCV", tile);
-	  
-	  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
-
-	  cv::imshow("binary as seen by OpenCV", tile);
-	  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,Eigen::RowMajor>> boh(dem., dem.rows(), dem.cols());
+	 // GENERATE THE "MEDIANED" DEM RASTER
+	 cv::Mat median_image;
+	 cv::medianBlur (CVdemRM, median_image, 5);
+	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
+	 draw_raster ("Median filtered raster", median_Eigen, pElement);
+	
+	 cv::Mat tile = CVdemRM(cv::Rect(10,85,150,145));
 	 
+	 cv::Mat CVtile8U;
+	 tile.convertTo(CVtile8U, CV_8U);
+	 cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
+	 cv::imshow("tile Row Major as seen by OpenCV CV_8U",CVtile8U);
 
+	 double min;
+     double max;
+     cv::minMaxIdx(tile, &min, &max);
 
-
-	//  cv::Mat median_image;
-	//  cv::medianBlur (CVdem, median_image, 5);
-
-	//  Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
-	//  draw_raster ("Median filtered raster", median_Eigen, pElement);
- //    
-	//  // I need something like that http://stackoverflow.com/questions/14539498/change-type-of-mat-object-from-cv-32f-to-cv-8u or that http://www.cs.iit.edu/~agam/cs512/lect-notes/opencv-intro/opencv-intro.html#SECTION00054000000000000000
-	//  cv::Mat tile = CVdem(cv::Rect(0,0,200,447));
-	//  //cv::Mat tile = CVdem(cv::Rect(50,50,150,400));
-	//  //cv::Mat tile = CVdem(cv::Rect(0,0,CVdem.cols,CVdem.rows));
-
-	//  Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> EigTile(tile.ptr<float>(), tile.rows, tile.cols);
-	//  draw_raster ("tile", EigTile, pElement);
-	//  //cv::imwrite(path + "my_roi.png",CVdem);
-	// 
-
-	//  double minVal; 
-	//  double maxVal ; 
- //     cv::Point minLoc; 
- //     cv::Point maxLoc;  
-	//  cv::minMaxLoc(tile, &minVal, &maxVal, &minLoc, &maxLoc);
-	//  double min;
- //     double max;
- //     cv::minMaxIdx(tile, &min, &max);
-
-
-	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
-	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_OTSU);
-	//  //cv::threshold(tile, tile, 0, maxVal-0.1, cv::THRESH_BINARY);//cv::THRESH_BINARY_INV + cv::THRESH_OTSU );
-
-	// 
-	///*  tile.convertTo(tile, CV_8U, 255.0/(max-min), -255.0*min/(max-min));
-	//  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);*/
-
-	//  tile.convertTo(tile, CV_8U);
-	//  cv::threshold(tile, tile,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);
-	//    
-
-
-	//  //tile.convertTo(tile, CV_32FC1);
-	//  
-	//  
-	// 
-	//  //generate_raster ("boh", median_Eigen, pElement );
-
-	//  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,Eigen::RowMajor>> median_Eigen(tile.ptr<float>(), tile.rows, tile.cols);
-
-
-	//  //tile.convertTo(tile, CV_8U);
-	//  //Eigen::Map<Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(tile.ptr<int>(), tile.rows, tile.cols);
-	//  
-	//
-
- //     // Map the OpenCV matrix with Eigen:
- //     //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
-
-	//  ////////// this is to verify if I obtain back (eigen -> openCV -> eigen) the same raster: the test goes well
-	//  //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> median_Eigen(CVdem.ptr<float>(), CVdem.rows, CVdem.cols);
-
+	  cv::threshold(CVtile8U, CVtile8U,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);//this method doesn't work on a float image
+	  //cv::threshold(tile, tile, 0, max-0.1, cv::THRESH_OTSU);
+	  //cv::threshold(tile, tile, 0, max-0.1, cv::THRESH_BINARY);
+	  CVtile8U.convertTo(CVtile8U, CV_8U);
+	  cv::imshow("binary as seen by OpenCV", CVtile8U);
 
 	  cv::waitKey(0);
 	  return true;

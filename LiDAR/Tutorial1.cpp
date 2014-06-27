@@ -153,7 +153,6 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    if(prova.generate_DEM(pElement, post_spacing) == true)
    {
 	   prova.standalone_opencv("tileFloatOpticks.png", pElement);
-	   //prova.standalone_opencv("demFloatOpticks.png", pElement);
    }
 
    //prova.generate_raster_from_intensity(pElement, post_spacing);

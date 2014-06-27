@@ -589,7 +589,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 tile.convertTo(CVtile8U, CV_8U);
 	 tile.convertTo(CVtile32FU, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FU(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
-	 draw_raster ("tileF32", tile_Eigen32FU, pElement);
+	 draw_raster ("test tile (float 32 bit)", tile_Eigen32FU, pElement);
 	 //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen8U(CVtile8U.ptr<float>(), CVtile8U.rows, CVtile8U.cols);
 	 //draw_raster ("tile8", tile_Eigen8U, pElement);
 
@@ -605,19 +605,19 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 double min;
      double max;
      cv::minMaxIdx(tile, &min, &max);
-	 cv::Mat tile_cazzo;
+	 cv::Mat tile_bis;
 
-	 cv::threshold(tile, tile_cazzo, badVal, max-1, cv::THRESH_BINARY_INV);
+	 cv::threshold(tile, tile_bis, badVal, max-1, cv::THRESH_BINARY_INV);
 
-	 cv::minMaxIdx(tile_cazzo, &min, &max);
+	 cv::minMaxIdx(tile_bis, &min, &max);
 	
 
 
 	// int scale = 255 / (max-min));
 
-	 tile.convertTo(tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
+	 //tile.convertTo(tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
 
-	 cv::imwrite(path + "tilecv_8uOpticks.png", tile);
+	 //cv::imwrite(path + "tilecv_8uOpticks.png", tile);
 
 	 cv::Scalar tempVal = cv::mean(tile);
 
@@ -632,19 +632,19 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 //cv::threshold(median_image, binary, 0, max, cv::THRESH_BINARY_INV);
 
 	 //* l'output di trshold è dello stesso tipo della matrice di input http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=threshold#threshold
-	 //cv::threshold(tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno ( a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
+	 //cv::threshold(tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno (a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
 	 tile.convertTo(binary, CV_8U);
 	 
 	
-	/* binary.convertTo(CVtile32FU, CV_32FC1);
+	 /*binary.convertTo(CVtile32FU, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
-	  draw_raster ("tile bin", tile_Eigen32FUb, pElement);*/
+	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);
+*/
+	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile
 
-	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV);
-
-	/* binary.convertTo(binary, CV_32FC1);
+	 binary.convertTo(binary, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> binary_Eigen32FU(binary.ptr<float>(), binary.rows, binary.cols);
-	 draw_raster ("binary op", binary_Eigen32FU, pElement);*/
+	 draw_raster ("binary op", binary_Eigen32FU, pElement);
 	 
 
 	 cv::Mat fg;
@@ -660,7 +660,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
     cv::Mat markers(binary.size(), CV_8U,cv::Scalar(0));
     markers = fg + bg;
 
-	/*bg.convertTo(bg, CV_32FC1);
+	bg.convertTo(bg, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
 	draw_raster ("bg op", bg_Eigen, pElement);
 
@@ -670,11 +670,9 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 
 	markers.convertTo(markers, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
-	draw_raster ("Markers op", markers_Eigen, pElement);*/
+	draw_raster ("Markers op", markers_Eigen, pElement);
 
 	
-	/* cv::Mat markers;
-     markers = fg + bg;*/
 
     
 	//markers = binary;
@@ -696,12 +694,9 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
     //*   image – Input 8-bit 3-channel image.
     //* markers – Input/output 32-bit single-channel image (map) of markers. It should have the same size as image.
 
-	//if (tile.size==binary.size)
+	// IF I UNCOMMENT THE LINES BELOW, THE PLUG-IN WILL CRASH
+	//if (tile.size==markers.size)
 	//{
-		// Create watershed segmentation object
-   /* WatershedSegmenter segmenter;
-    segmenter.setMarkers(markers);
-	cv::Mat result = segmenter.process(tile);*/
 	//cv::watershed(tile, markers);
 	//}
 

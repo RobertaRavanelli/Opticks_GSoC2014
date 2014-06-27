@@ -19,3 +19,7 @@ To add the openCV highgui methods I changed the openCV property sheets (SDK_HOME
 Then, to run the Plug-In I copied the open_cv_highgui220.dll from the sdk dependencies (SDK_HOME\Dependencies\64\bin) to the Opticks installation bin folder (C:\Program Files\Opticks\4.12Nightly20140410.18697\Bin)
 
 I also copied the cxcore.h header file (needed for the conversion from/to OpenCV- eigen matrices) in the SDK_HOME\Dependencies\64\include\opencv2\core directory
+
+=============== Test point cloud ========
+You can find a test point cloud at the link below:
+https://www.dropbox.com/s/7ulz7a1twu1yyk4/test_point_cloud.las

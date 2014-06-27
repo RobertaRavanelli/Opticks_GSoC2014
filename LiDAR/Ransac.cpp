@@ -1,18 +1,14 @@
 #include "Ransac.h"
   
-
-
 Ransac::Ransac(void)
 {
 	//path = "$(OPTICKS_CODE_DIR)/application/PlugIns/src/LiDAR/Results/";
     path = "C:/Users/Roberta/Desktop/Results/";
 }
 
-
 Ransac::~Ransac(void)
 {
 }
-
 
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
@@ -393,7 +389,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
       eigenvector = vec3 / std::sqrt (len3);
   }
 
-//*  computes the roots of the characteristic polynomial of the input matrix m, which are the eigenvalues
+ //*  computes the roots of the characteristic polynomial of the input matrix m, which are the eigenvalues
 //    * \param[in] m input matrix
 //    * \param[out] roots roots of the characteristic polynomial of the input matrix m, which are the eigenvalues
 //    */
@@ -462,7 +458,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     }
   }
 
-   /** Compute the roots of a quadratic polynom x^2 + b*x + c = 0
+  /** Compute the roots of a quadratic polynom x^2 + b*x + c = 0
     * \param[in] b linear parameter
     * \param[in] c constant parameter
     * \param[out] roots solutions of x^2 + b*x + c = 0
@@ -480,6 +476,10 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     roots (2) = 0.5f * (b + sd);
     roots (1) = 0.5f * (b - sd);
   }
+
+
+
+///// all the functions below maybe should be in another class
 
 bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //post_spacing is the pixel spacing of the dem matrix
 {
@@ -556,13 +556,15 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	   dem_file.close();
 
 	   // GENERATE THE DEM RASTER
-	   draw_raster ("DEM raster", demRM, pElement);
+	   draw_raster ("DEM", demRM, pElement);
 	   
 
 	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
-	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::ColMajor);//,Eigen::RowMajor); 
+	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::RowMajor); 
 	  cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
-	  
+	  cv::imwrite(path + "demFloatOpticks.png", CVdemRM);
+
+
 	 //cv::imshow("dem as seen by OpenCV",CVdem);
 	 cv::namedWindow("dem Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
 	 cv::Mat CVdemRM8U;
@@ -570,30 +572,154 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 cv::imshow("dem Row Major as seen by OpenCV CV_8U",CVdemRM8U);
 
 	 // GENERATE THE "MEDIANED" DEM RASTER
-	 cv::Mat median_image;
-	 cv::medianBlur (CVdemRM, median_image, 5);
-	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image.ptr<float>(), median_image.rows, median_image.cols);
-	 draw_raster ("Median filtered raster", median_Eigen, pElement);
+	 cv::Mat median_image_all;
+	 cv::medianBlur (CVdemRM, median_image_all, 5);
+	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image_all.ptr<float>(), median_image_all.rows, median_image_all.cols);
+	 draw_raster ("Median filtered DEM (all)", median_Eigen, pElement);
 	
 	 cv::Mat tile = CVdemRM(cv::Rect(10,85,150,145));
-	 
+	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(tile.ptr<float>(), tile.rows, tile.cols);
+	 draw_raster ("tile", tile_Eigen, pElement);*/
+	 cv::Mat tile2 = CVdemRM(cv::Rect(100,100,220,50));
+	 //tile2.convertTo(tile2, CV_8U);
+	 //cv::imshow("tile2", tile2);
+
 	 cv::Mat CVtile8U;
+	 cv::Mat CVtile32FU;
 	 tile.convertTo(CVtile8U, CV_8U);
-	 cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
+	 tile.convertTo(CVtile32FU, CV_32FC1);
+	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FU(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
+	 draw_raster ("tileF32", tile_Eigen32FU, pElement);
+	 //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen8U(CVtile8U.ptr<float>(), CVtile8U.rows, CVtile8U.cols);
+	 //draw_raster ("tile8", tile_Eigen8U, pElement);
+
+	/* cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
 	 cv::imshow("tile Row Major as seen by OpenCV CV_8U",CVtile8U);
+
+	 cv::namedWindow("tile Row Major as seen by OpenCV CV_32F", CV_WINDOW_AUTOSIZE);
+	 cv::imshow("tile Row Major as seen by OpenCV CV_32F",CVtile32FU);*/
+
+	 cv::imwrite(path + "tileFloatOpticks.png", tile);
+	 //cv::imwrite(path + "tileFloatOpticks.png", tile2);
 
 	 double min;
      double max;
      cv::minMaxIdx(tile, &min, &max);
+	 cv::Mat tile_cazzo;
 
-	  cv::threshold(CVtile8U, CVtile8U,0, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU);//this method doesn't work on a float image
-	  //cv::threshold(tile, tile, 0, max-0.1, cv::THRESH_OTSU);
-	  //cv::threshold(tile, tile, 0, max-0.1, cv::THRESH_BINARY);
-	  CVtile8U.convertTo(CVtile8U, CV_8U);
-	  cv::imshow("binary as seen by OpenCV", CVtile8U);
+	 cv::threshold(tile, tile_cazzo, badVal, max-1, cv::THRESH_BINARY_INV);
 
-	  cv::waitKey(0);
-	  return true;
+	 cv::minMaxIdx(tile_cazzo, &min, &max);
+	
+
+
+	// int scale = 255 / (max-min));
+
+	 tile.convertTo(tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
+
+	 cv::imwrite(path + "tilecv_8uOpticks.png", tile);
+
+	 cv::Scalar tempVal = cv::mean(tile);
+
+	 double mean = tempVal.val[0];;
+	 cv::Mat median_image;
+	 
+	 //cv::medianBlur (tile, median_image, 5);
+	 
+	 cv::Mat binary;
+	 
+	 //threshold( src_gray, dst, threshold_value, max_BINARY_value,threshold_type );
+	 //cv::threshold(median_image, binary, 0, max, cv::THRESH_BINARY_INV);
+
+	 //* l'output di trshold è dello stesso tipo della matrice di input http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=threshold#threshold
+	 //cv::threshold(tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno ( a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
+	 tile.convertTo(binary, CV_8U);
+	 
+	
+	/* binary.convertTo(CVtile32FU, CV_32FC1);
+	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
+	  draw_raster ("tile bin", tile_Eigen32FUb, pElement);*/
+
+	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV);
+
+	/* binary.convertTo(binary, CV_32FC1);
+	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> binary_Eigen32FU(binary.ptr<float>(), binary.rows, binary.cols);
+	 draw_raster ("binary op", binary_Eigen32FU, pElement);*/
+	 
+
+	 cv::Mat fg;
+	 cv::erode(binary, fg, cv::Mat(), cv::Point(-1,-1), 2);
+	 
+
+	 // Identify image pixels without objects
+    cv::Mat bg;
+    cv::dilate(binary, bg, cv::Mat(), cv::Point(-1,-1), 1);// forse sopporta solo 2 iterazioni
+    cv::threshold(bg, bg, 1, 128, cv::THRESH_BINARY_INV);
+	
+    // Create markers image
+    cv::Mat markers(binary.size(), CV_8U,cv::Scalar(0));
+    markers = fg + bg;
+
+	/*bg.convertTo(bg, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
+	draw_raster ("bg op", bg_Eigen, pElement);
+
+	fg.convertTo(fg, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
+	draw_raster ("fg op", fg_Eigen, pElement);
+
+	markers.convertTo(markers, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
+	draw_raster ("Markers op", markers_Eigen, pElement);*/
+
+	
+	/* cv::Mat markers;
+     markers = fg + bg;*/
+
+    
+	//markers = binary;
+	
+	markers.convertTo(markers, CV_32S);
+	tile.convertTo(tile, CV_8UC3);
+	/*imshow("boh2", tile);
+    imshow("boh23", markers);*/
+
+	//* Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (>0) indices.
+	//* So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. 
+	//* Such markers can be retrieved from a binary mask using findContours() and drawContours()
+	//* The markers are “seeds” of the future image regions. 
+	//* All the other pixels in markers, whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0’s.
+	//* In the function output, each pixel in markers is set to a value of the “seed” components or to -1 at boundaries between the regions.
+	
+	//* cv::watershed(image, markers)
+	//* Parameters:	
+    //*   image – Input 8-bit 3-channel image.
+    //* markers – Input/output 32-bit single-channel image (map) of markers. It should have the same size as image.
+
+	//if (tile.size==binary.size)
+	//{
+		// Create watershed segmentation object
+   /* WatershedSegmenter segmenter;
+    segmenter.setMarkers(markers);
+	cv::Mat result = segmenter.process(tile);*/
+	//cv::watershed(tile, markers);
+	//}
+
+	//binary.convertTo(binary, CV_8U);
+	//cv::imshow("binary as seen by OpenCV CV_8U",binary);
+
+	//fg.convertTo(fg, CV_8U);
+	//cv::imshow("foreground as seen by OpenCV CV_8U",fg);
+
+	//markers.convertTo(markers, CV_8U);
+	//cv::imshow("markers as seen by OpenCV CV_8U",markers);
+
+
+	
+	
+	 
+	 cv::waitKey(0);
+	 return true;
 }
 
 bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing)
@@ -754,10 +880,6 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
    double sumX, sumY, sumZ; // servono per la media
    sumX = sumY = sumZ = 0;
 
-   std::vector<double> x_coordinates  =  std::vector<double> (pDesc->getPointCount());
-   std::vector<double> y_coordinates  =  std::vector<double> (pDesc->getPointCount());
-   std::vector<double> z_coordinates  =  std::vector<double> (pDesc->getPointCount());
-
    // ciclo che accede a tutti i punti della point cloud
    int prog = 0;
    int points_number =0;//mi serve a verificare che il numero di punti della pointcloud sia uguale a quello del descriptor
@@ -907,3 +1029,119 @@ bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic,
 	
 	return true;
 }
+
+bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pElement)
+{
+	cv::Mat src;
+	cv::Mat median_image;
+	cv::Mat binary;
+	cv::Mat binary2;
+	cv::Mat image;
+	src = cv::imread(path + image_name, 1);
+
+	cv::medianBlur (src, median_image, 5);
+
+    image = median_image;
+    //image = src;
+    cv::cvtColor(image, binary, CV_BGR2GRAY);
+	
+	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
+	cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
+	//cv::imshow("binary standalone", binary);
+	binary.convertTo(binary2, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> boh_Eigen32FU(binary2.ptr<float>(), binary2.rows, binary2.cols);
+	draw_raster ("binary standalone", boh_Eigen32FU, pElement);
+
+	// Eliminate noise and smaller objects c++
+     cv::Mat fg;
+     cv::erode(binary, fg, cv::Mat(), cv::Point(-1,-1), 2);
+	
+    // Identify image pixels without objects
+    cv::Mat bg;
+    cv::dilate(binary, bg, cv::Mat(), cv::Point(-1,-1), 3);
+    cv::threshold(bg, bg, 1, 128, cv::THRESH_BINARY_INV);
+
+
+    // Create markers image
+    cv::Mat markers(binary.size(),CV_8U,cv::Scalar(0));
+    markers = fg + bg;
+  
+    //cv::namedWindow("markers", CV_WINDOW_NORMAL);
+    //cv::imshow("markers", markers);
+
+    // Create watershed segmentation object
+    WatershedSegmenter segmenter;
+    segmenter.setMarkers(markers);
+
+    cv::Mat result = segmenter.process(image);
+    result.convertTo(result, CV_8U);
+    //cv::namedWindow("final_result", CV_WINDOW_NORMAL);
+    //cv::imshow("final_result", result);
+
+	result.convertTo(result, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> result_Eigen(result.ptr<float>(), result.rows, result.cols);
+	draw_raster ("Result standalone", result_Eigen, pElement);
+
+	markers.convertTo(markers, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
+	draw_raster ("Markers standalone", markers_Eigen, pElement);
+
+	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
+
+	bg.convertTo(bg, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
+	draw_raster ("bg sa", bg_Eigen, pElement);
+
+	fg.convertTo(fg, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
+	draw_raster ("fg sa", fg_Eigen, pElement);
+
+	cv::waitKey(0);
+	return true;
+}
+
+
+
+cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
+{
+	 // https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
+	  double m=(image.rows*image.cols)/2;
+       int bin0=0, bin1=0, bin2=0;
+      cv::Scalar mode;
+       mode.val[0]=-1;
+       mode.val[1]=-1;
+       mode.val[2]=-1;
+        int histSize = 256;
+	    float range[] = { 0, 256 } ;
+	    const float* histRange = { range };
+	    bool uniform = true;
+	    bool accumulate = false;
+	    cv::Mat hist0, hist1, hist2;
+		std::vector<cv::Mat> channels;
+	    cv::split( image, channels );
+	    cv::calcHist( &channels[0], 1, 0, cv::Mat(), hist0, 1, &histSize, &histRange, uniform, accumulate );
+		cv::calcHist( &channels[1], 1, 0, cv::Mat(), hist1, 1, &histSize, &histRange, uniform, accumulate );
+		cv::calcHist( &channels[2], 1, 0, cv::Mat(), hist2, 1, &histSize, &histRange, uniform, accumulate );
+
+		for (int i=0; i<256 ;i++)
+		{
+			if (bin0<cvRound(hist0.at<float>(i)))
+			{
+				bin0=cvRound(hist0.at<float>(i));
+				mode.val[0]=i;
+			}
+			if (bin1<cvRound(hist1.at<float>(i)))
+			{
+				bin1=cvRound(hist1.at<float>(i));
+				mode.val[1]=i;
+			}
+			if (bin2<cvRound(hist2.at<float>(i)))
+			{
+				bin2=cvRound(hist2.at<float>(i));
+				mode.val[2]=i;
+			}
+		}
+
+		return mode;
+}
+

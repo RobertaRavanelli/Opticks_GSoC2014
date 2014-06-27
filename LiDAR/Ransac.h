@@ -59,6 +59,25 @@ computeRoots2 (const Scalar& b, const Scalar& c, Roots& roots);
 template<typename Matrix, typename Vector> inline void
 eigen33 ( Matrix& mat, typename Matrix::Scalar& eigenvalue, Vector& eigenvector);
 
+class WatershedSegmenter
+{
+private:
+    cv::Mat markers;
+public:
+    void setMarkers(cv::Mat& markerImage)
+    {
+        markerImage.convertTo(markers, CV_32S);
+    }
+
+    cv::Mat process(cv::Mat &image)
+    {
+        cv::watershed(image, markers);
+        markers.convertTo(markers,CV_8U);
+        return markers;
+    }
+};
+
+
 class Ransac
 {
 public:
@@ -89,5 +108,7 @@ public:
 	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
 	bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
+	bool Ransac::standalone_opencv(std::string image_name,PointCloudElement* pElement);
+	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
 };
 

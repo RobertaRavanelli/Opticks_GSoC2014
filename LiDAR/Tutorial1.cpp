@@ -152,8 +152,26 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    static const float post_spacing = 5.0f;//5.0f
    if(prova.generate_DEM(pElement, post_spacing) == true)
    {
-	   prova.standalone_opencv("tileFloatOpticks.png", pElement);
+	//prova.standalone_opencv("tileFloatOpticks.png", pElement);
+	   prova.standalone_opencv("Tiles/prova1_0.png", pElement);
+
+	    int n_rows = 4;
+        int n_cols = 5;
+        for(int i = 0; i < n_rows; i++) 
+	    {  //i is row index
+             for(int j = 0; j < n_cols; j++)
+	         {
+		       std::ostringstream oss;
+               oss << i << "_" << j << ".png";
+               std::string name = oss.str();
+               prova.standalone_opencv("Tiles/prova"+ name, pElement);
+	         }
+         }
    }
+
+  
+
+
 
    //prova.generate_raster_from_intensity(pElement, post_spacing);
    progress.report("Computing RANSAC", 40, NORMAL);

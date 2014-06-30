@@ -556,7 +556,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	   dem_file.close();
 
 	   // GENERATE THE DEM RASTER
-	   draw_raster ("DEM", demRM, pElement);
+	   draw_raster_from_eigen_mat ("DEM", demRM, pElement);
 	   
 
 	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
@@ -574,8 +574,9 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 // GENERATE THE "MEDIANED" DEM RASTER
 	 cv::Mat median_image_all;
 	 cv::medianBlur (CVdemRM, median_image_all, 5);
-	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image_all.ptr<float>(), median_image_all.rows, median_image_all.cols);
-	 draw_raster ("Median filtered DEM (all)", median_Eigen, pElement);
+	 draw_raster_from_openCV_mat ("Median filtered DEM (all)", median_image_all,  pElement);
+	/* Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image_all.ptr<float>(), median_image_all.rows, median_image_all.cols);
+	 draw_raster_from_eigen_mat ("Median filtered DEM (all)", median_Eigen, pElement);*/
 	
 	 cv::Mat tile = CVdemRM(cv::Rect(10,85,150,145));
 	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(tile.ptr<float>(), tile.rows, tile.cols);
@@ -583,15 +584,20 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 cv::Mat tile2 = CVdemRM(cv::Rect(100,100,220,50));
 	 //tile2.convertTo(tile2, CV_8U);
 	 //cv::imshow("tile2", tile2);
+	 
+	
 
 	 cv::Mat CVtile8U;
-	 cv::Mat CVtile32FU;
+	 cv::Mat CVtile32FC1;
 	 tile.convertTo(CVtile8U, CV_8U);
-	 tile.convertTo(CVtile32FU, CV_32FC1);
-	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FU(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
-	 draw_raster ("test tile (float 32 bit)", tile_Eigen32FU, pElement);
-	 //Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen8U(CVtile8U.ptr<float>(), CVtile8U.rows, CVtile8U.cols);
-	 //draw_raster ("tile8", tile_Eigen8U, pElement);
+	 tile.convertTo(CVtile32FC1, CV_32FC1);
+	/* draw_raster_from_openCV_mat ("prova tile (it doesn't work, it needs )", tile,  pElement);
+	 draw_raster_from_openCV_mat ("prova tile 8U", CVtile8U,  pElement);*/
+	 draw_raster_from_openCV_mat ("test tile (float 32 bit)", CVtile32FC1,  pElement);
+	 
+	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FC1(CVtile32FC1.ptr<float>(), CVtile32FC1.rows, CVtile32FC1.cols);
+	 draw_raster_from_eigen_mat ("test tile (float 32 bit)", tile_Eigen32FC1, pElement);*/
+	 
 
 	/* cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
 	 cv::imshow("tile Row Major as seen by OpenCV CV_8U",CVtile8U);
@@ -611,7 +617,6 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 
 	 cv::minMaxIdx(tile_bis, &min, &max);
 	
-
 
 	// int scale = 255 / (max-min));
 
@@ -642,9 +647,10 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 */
 	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile
 
-	 binary.convertTo(binary, CV_32FC1);
+	 draw_raster_from_openCV_mat ("binary op", binary,  pElement);
+	/* binary.convertTo(binary, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> binary_Eigen32FU(binary.ptr<float>(), binary.rows, binary.cols);
-	 draw_raster ("binary op", binary_Eigen32FU, pElement);
+	 draw_raster_from_eigen_mat ("binary op", binary_Eigen32FU, pElement);*/
 	 
 
 	 cv::Mat fg;
@@ -660,21 +666,23 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
     cv::Mat markers(binary.size(), CV_8U,cv::Scalar(0));
     markers = fg + bg;
 
-	bg.convertTo(bg, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
-	draw_raster ("bg op", bg_Eigen, pElement);
 
-	fg.convertTo(fg, CV_32FC1);
+	draw_raster_from_openCV_mat ("bg op", bg,  pElement);
+	//bg.convertTo(bg, CV_32FC1);
+	//Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
+	//draw_raster_from_eigen_mat ("bg op", bg_Eigen, pElement);
+
+	draw_raster_from_openCV_mat ("fg op", fg,  pElement);
+	/*fg.convertTo(fg, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
-	draw_raster ("fg op", fg_Eigen, pElement);
+	draw_raster_from_eigen_mat ("fg op", fg_Eigen, pElement);*/
 
-	markers.convertTo(markers, CV_32FC1);
+	draw_raster_from_openCV_mat ("markers op", markers,  pElement);
+	/*markers.convertTo(markers, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
-	draw_raster ("Markers op", markers_Eigen, pElement);
+	draw_raster_from_eigen_mat ("Markers op", markers_Eigen, pElement);*/
 
-	
 
-    
 	//markers = binary;
 	
 	markers.convertTo(markers, CV_32S);
@@ -710,11 +718,11 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	//cv::imshow("markers as seen by OpenCV CV_8U",markers);
 
 
-	
-	
+	n_x_n_tile_generator(CVdemRM, 4);
+	n_x_m_tile_generator(CVdemRM, 4, 5, pElement);
 	 
-	 cv::waitKey(0);
-	 return true;
+	cv::waitKey(0);
+	return true;
 }
 
 bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing)
@@ -983,14 +991,14 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
 	return true;
 }
 
-bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement)
+bool Ransac::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement)
 {
 	const float badVal = -9999.f;
 	
 	RasterElement* pMedianDemOut = RasterUtilities::createRasterElement(name,  static_cast<int>(median_Eigen.rows()), static_cast<int>(median_Eigen.cols()), FLT4BYTES, true, pElement);
 	   if (pMedianDemOut == NULL)
 	   {
-		   msg2 += "Unable to create DEM raster.";
+		   msg2 += "Unable to create DEM raster ("+ name +").\n";
 		   return false;
 	   }
 	   pMedianDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
@@ -1025,6 +1033,14 @@ bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic,
 	return true;
 }
 
+bool Ransac::draw_raster_from_openCV_mat (std::string name, cv::Mat image, PointCloudElement* pElement)
+{
+	image.convertTo(image, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> image_Eigen(image.ptr<float>(), image.rows, image.cols);
+	draw_raster_from_eigen_mat (name, image_Eigen, pElement);
+	return true;
+}
+
 bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pElement)
 {
 	cv::Mat src;
@@ -1034,18 +1050,29 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 	cv::Mat image;
 	src = cv::imread(path + image_name, 1);
 
+	cv::Mat CVtile32FC1;
+	cv::Mat CVtile8U;
+
+	/*src.convertTo(CVtile32FC1, CV_32FC1);
+	src.convertTo(CVtile8U, CV_8UC1);
+	draw_raster_from_openCV_mat ("tile0 " + image_name, CVtile32FC1,  pElement);
+	draw_raster_from_openCV_mat ("tile " + image_name, CVtile8U,  pElement);*/
+
 	cv::medianBlur (src, median_image, 5);
 
     image = median_image;
     //image = src;
     cv::cvtColor(image, binary, CV_BGR2GRAY);
 	
+
 	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
 	cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
 	//cv::imshow("binary standalone", binary);
-	binary.convertTo(binary2, CV_32FC1);
+	
+	draw_raster_from_openCV_mat (image_name + " binary sa", binary,  pElement);
+	/*binary.convertTo(binary2, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> boh_Eigen32FU(binary2.ptr<float>(), binary2.rows, binary2.cols);
-	draw_raster ("binary standalone", boh_Eigen32FU, pElement);
+	draw_raster_from_eigen_mat ("binary standalone", boh_Eigen32FU, pElement);*/
 
 	// Eliminate noise and smaller objects c++
      cv::Mat fg;
@@ -1073,29 +1100,87 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
     //cv::namedWindow("final_result", CV_WINDOW_NORMAL);
     //cv::imshow("final_result", result);
 
-	result.convertTo(result, CV_32FC1);
+	draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
+	/*result.convertTo(result, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> result_Eigen(result.ptr<float>(), result.rows, result.cols);
-	draw_raster ("Result standalone", result_Eigen, pElement);
+	draw_raster_from_eigen_mat ("Result standalone", result_Eigen, pElement);*/
 
-	markers.convertTo(markers, CV_32FC1);
+	draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
+	/*markers.convertTo(markers, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
-	draw_raster ("Markers standalone", markers_Eigen, pElement);
+	draw_raster_from_eigen_mat ("Markers standalone", markers_Eigen, pElement);*/
 
 	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
 
-	bg.convertTo(bg, CV_32FC1);
+	draw_raster_from_openCV_mat (image_name + " bg sa", bg,  pElement);
+	/*bg.convertTo(bg, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
-	draw_raster ("bg sa", bg_Eigen, pElement);
+	draw_raster_from_eigen_mat ("bg sa", bg_Eigen, pElement);*/
 
-	fg.convertTo(fg, CV_32FC1);
+	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);
+	/*fg.convertTo(fg, CV_32FC1);
 	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
-	draw_raster ("fg sa", fg_Eigen, pElement);
+	draw_raster_from_eigen_mat ("fg sa", fg_Eigen, pElement);*/
 
 	cv::waitKey(0);
 	return true;
 }
 
+bool Ransac::n_x_n_tile_generator(cv::Mat image, int n)
+{
+	int unitWidth = image.cols / n;  
+    int unitHeight = image.rows / n; 
 
+	//This for loop generates nXn tiles (if n = 4, we will have 16 rectangular tiles) http://stackoverflow.com/questions/18626912/submatrix-out-of-bounds-opencv
+	for(int i = 0; i < n; i++) 
+	{  //i is row index
+    // inner loop added so that more than one row of tiles written
+       for(int j = 0; j < n; j++)
+	   { // j is col index
+        //Take the next tile in the nxn grid. Unit is the width and height of
+        //each tile. i%n and i/n are just fancy ways of a double x,y for loop
+
+ 
+        cv::Mat subImage = image(cv::Rect(j * unitWidth, i * unitHeight, unitWidth, unitHeight));
+
+        std::ostringstream oss;
+        oss << i << "_" << j << ".png";
+        std::string name = oss.str();
+        imwrite(path + "Tiles/" + name, subImage);
+        }
+    }
+	return true;
+}
+
+bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement )
+{
+	int unitWidth = image.cols / n_cols; 
+    int unitHeight = image.rows / n_rows; 
+
+	//This for loop generates n_rowsXn_cols tiles 
+	for(int i = 0; i < n_rows; i++) 
+	{  //i is row index
+    // inner loop added so that more than one row of tiles written
+       for(int j = 0; j < n_cols; j++)
+	   { // j is col index
+       
+        cv::Mat subImage = image(cv::Rect(j * unitWidth, i * unitHeight, unitWidth, unitHeight));
+
+        std::ostringstream oss;
+        oss << i << "_" << j << ".png";
+        std::string name = oss.str();
+		cv::Mat CVtile32FC1;
+	 
+	    subImage.convertTo(CVtile32FC1, CV_32FC1);
+	
+	    draw_raster_from_openCV_mat ("tile (float 32 bit) " + name, CVtile32FC1,  pElement);
+
+        imwrite(path + "Tiles/" + "prova"+ name, subImage);
+        }
+	}
+
+	return true;
+}
 
 cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 {

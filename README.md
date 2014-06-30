@@ -14,6 +14,8 @@ Ransac_results.txt: the results of the RANSAC algorithm applied to the original 
 In order to produce this file, you need to create a Results directory on your Desktop and to change the username in the path string:
 Ransac.cpp line 8: path = "C:/Users/Roberta/Desktop/Results/"; --> path = "C:/Users/your_username/Desktop/Results/";
 
+The program now saves the png files of the point cloud tiles inside the directory "Tiles" that must be inside the Results directory (C:\Users\Roberta\Desktop\Results\Tiles).
+
 ================ OpenCV ================
 To add the openCV highgui methods I changed the openCV property sheets (SDK_HOME\application\CompileSettings), adding the opencv_highgui220.lib to the line 11 (<AdditionalDependencies>).
 Then, to run the Plug-In I copied the open_cv_highgui220.dll from the sdk dependencies (SDK_HOME\Dependencies\64\bin) to the Opticks installation bin folder (C:\Program Files\Opticks\4.12Nightly20140410.18697\Bin)

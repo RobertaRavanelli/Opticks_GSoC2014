@@ -39,6 +39,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core_c.h>
 #include <opencv2/core/eigen.hpp>
+//#include <sstream>   
 
 
 
@@ -107,8 +108,11 @@ public:
 	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
-	bool Ransac::draw_raster (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
+	bool Ransac::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
+	bool Ransac::draw_raster_from_openCV_mat (std::string name, cv::Mat image, PointCloudElement* pElement);
 	bool Ransac::standalone_opencv(std::string image_name,PointCloudElement* pElement);
+	bool Ransac::n_x_n_tile_generator(cv::Mat image, int n);
+	bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement);
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
 };
 

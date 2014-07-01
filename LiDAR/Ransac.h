@@ -91,11 +91,15 @@ public:
 	int nr_p;//NUMBER OF THE INLIERS for the single iterations
 	Eigen::VectorXd optimized_coefficients;
 
+	int k_for_process_all_point_cloud;
 	std::string msg2;
 	std::string msg1; // statistics message
 	std::ofstream myfile;
 	std::string path;// ="C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
-    
+    std::vector<cv::Mat> tiles_array;
+	std::vector<cv::Mat> result_tiles_array;
+
+
 	Ransac(void);
 	~Ransac(void);
 	bool Ransac::ComputeModel(PointCloudElement* pElement);
@@ -113,6 +117,7 @@ public:
 	bool Ransac::standalone_opencv(std::string image_name,PointCloudElement* pElement);
 	bool Ransac::n_x_n_tile_generator(cv::Mat image, int n);
 	bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement);
+	bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement);
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
 };
 

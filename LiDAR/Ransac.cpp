@@ -585,8 +585,6 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 //tile2.convertTo(tile2, CV_8U);
 	 //cv::imshow("tile2", tile2);
 	 
-	
-
 	 cv::Mat CVtile8U;
 	 cv::Mat CVtile32FC1;
 	 tile.convertTo(CVtile8U, CV_8U);
@@ -645,7 +643,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
 	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);
 */
-	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile
+	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
 
 	 draw_raster_from_openCV_mat ("binary op", binary,  pElement);
 	/* binary.convertTo(binary, CV_32FC1);
@@ -1067,12 +1065,8 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 
 	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
 	cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
-	//cv::imshow("binary standalone", binary);
 	
 	draw_raster_from_openCV_mat (image_name + " binary sa", binary,  pElement);
-	/*binary.convertTo(binary2, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> boh_Eigen32FU(binary2.ptr<float>(), binary2.rows, binary2.cols);
-	draw_raster_from_eigen_mat ("binary standalone", boh_Eigen32FU, pElement);*/
 
 	// Eliminate noise and smaller objects c++
      cv::Mat fg;
@@ -1083,46 +1077,30 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
     cv::dilate(binary, bg, cv::Mat(), cv::Point(-1,-1), 3);
     cv::threshold(bg, bg, 1, 128, cv::THRESH_BINARY_INV);
 
-
     // Create markers image
     cv::Mat markers(binary.size(),CV_8U,cv::Scalar(0));
     markers = fg + bg;
-  
-    //cv::namedWindow("markers", CV_WINDOW_NORMAL);
-    //cv::imshow("markers", markers);
 
     // Create watershed segmentation object
     WatershedSegmenter segmenter;
     segmenter.setMarkers(markers);
 
     cv::Mat result = segmenter.process(image);
-    result.convertTo(result, CV_8U);
-    //cv::namedWindow("final_result", CV_WINDOW_NORMAL);
-    //cv::imshow("final_result", result);
+    
+	result_tiles_array[k_for_process_all_point_cloud] = result;
+	
+	result.convertTo(result, CV_8U);
 
 	draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
-	/*result.convertTo(result, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> result_Eigen(result.ptr<float>(), result.rows, result.cols);
-	draw_raster_from_eigen_mat ("Result standalone", result_Eigen, pElement);*/
 
 	draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
-	/*markers.convertTo(markers, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
-	draw_raster_from_eigen_mat ("Markers standalone", markers_Eigen, pElement);*/
-
-	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
 
 	draw_raster_from_openCV_mat (image_name + " bg sa", bg,  pElement);
-	/*bg.convertTo(bg, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
-	draw_raster_from_eigen_mat ("bg sa", bg_Eigen, pElement);*/
 
 	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);
-	/*fg.convertTo(fg, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
-	draw_raster_from_eigen_mat ("fg sa", fg_Eigen, pElement);*/
-
-	cv::waitKey(0);
+	
+	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
+	//cv::waitKey(0);
 	return true;
 }
 
@@ -1156,6 +1134,10 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 {
 	int unitWidth = image.cols / n_cols; 
     int unitHeight = image.rows / n_rows; 
+	int k = 0;
+	
+	tiles_array.resize(n_rows * n_cols);
+
 
 	//This for loop generates n_rowsXn_cols tiles 
 	for(int i = 0; i < n_rows; i++) 
@@ -1166,21 +1148,174 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
        
         cv::Mat subImage = image(cv::Rect(j * unitWidth, i * unitHeight, unitWidth, unitHeight));
 
+		tiles_array[k]= subImage;
         std::ostringstream oss;
         oss << i << "_" << j << ".png";
         std::string name = oss.str();
 		cv::Mat CVtile32FC1;
 	 
-	    subImage.convertTo(CVtile32FC1, CV_32FC1);
-	
-	    draw_raster_from_openCV_mat ("tile (float 32 bit) " + name, CVtile32FC1,  pElement);
+	   /* subImage.convertTo(CVtile32FC1, CV_32FC1);
+	    draw_raster_from_openCV_mat ("tile (float 32 bit) " + name, CVtile32FC1,  pElement);*/
 
         imwrite(path + "Tiles/" + "prova"+ name, subImage);
+		k++;
         }
 	}
 
+	int i, j;
+	for(int index = 0; index < k; index ++) 
+	{
+		j = index % n_cols;
+		i = index / n_cols;
+
+		std::ostringstream oss;
+        oss << index <<  "_" << i <<  "_" << j ;
+		std::string name = oss.str();
+
+		tiles_array[index].convertTo(tiles_array[index], CV_8UC1);
+		//cv::imshow(name, tiles_array[index]);
+	}
+
+	
+	// the code below isn't parametrized yet: it works only for  n_rows = 4 and n_cols = 5
+	std::vector<cv::Mat> horizontal_matrix_array;
+	horizontal_matrix_array.resize(n_rows);
+	
+	cv::Mat HM1;
+	cv::Mat HM2;
+	cv::Mat merged_mat;
+
+	//int k_bis = 0;
+	//
+	//for(int i = 0; i < n_rows; i++) 
+	//{  //i is row index
+ //   // inner loop added so that more than one row of tiles written
+ //      for(int j = 0; j < n_cols; j++)
+	//   { // j is col index
+ //       //image_array[k] = new cv::Mat;
+
+	//	k_bis ++;
+ //       }
+
+
+	//}
+
+
+	cv::hconcat(tiles_array[0],tiles_array[1],HM1);
+	cv::hconcat(tiles_array[2],tiles_array[3],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,tiles_array[4],horizontal_matrix_array[0]);
+
+	cv::hconcat(tiles_array[5],tiles_array[6],HM1);
+	cv::hconcat(tiles_array[7],tiles_array[8],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,tiles_array[9],horizontal_matrix_array[1]);
+
+	cv::hconcat(tiles_array[10],tiles_array[11],HM1);
+	cv::hconcat(tiles_array[12],tiles_array[13],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,tiles_array[14],horizontal_matrix_array[2]);
+
+    cv::hconcat(tiles_array[15],tiles_array[16],HM1);
+	cv::hconcat(tiles_array[17],tiles_array[18],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,tiles_array[19],horizontal_matrix_array[3]);
+
+	/*cv::imshow("prova 0", horizontal_matrix_array[0]);
+	cv::imshow("prova 1", horizontal_matrix_array[1]);
+	cv::imshow("prova 2", horizontal_matrix_array[2]);
+	cv::imshow("prova 3", horizontal_matrix_array[3]);*/
+
+	cv::vconcat(horizontal_matrix_array[0],horizontal_matrix_array[1],HM1);
+	cv::vconcat(horizontal_matrix_array[2],horizontal_matrix_array[3],HM2);
+	cv::vconcat(HM1, HM2 ,merged_mat);
+
+	cv::imshow("merged", merged_mat);
+
+	//cv::waitKey(0);
 	return true;
 }
+
+
+bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement)
+{
+	k_for_process_all_point_cloud = 0;
+	result_tiles_array.resize(n_rows * n_cols) ;  
+	
+	 for(int i = 0; i < n_rows; i++) 
+	    {  //i is row index
+             for(int j = 0; j < n_cols; j++)
+	         {
+		       std::ostringstream oss;
+               oss << i << "_" << j << ".png";
+               std::string name = oss.str();
+               standalone_opencv("Tiles/prova"+ name, pElement);
+			  // cv::imshow("result2 " + name,  result_tiles_array[k_for_process_all_point_cloud]);
+			   k_for_process_all_point_cloud++;
+	         }
+         }
+	
+	int i, j;
+	for(int index = 0; index < k_for_process_all_point_cloud; index ++) 
+	{
+		j = index % n_cols;
+		i = index / n_cols;
+
+		std::ostringstream oss;
+        oss << index <<  "_" << i <<  "_" << j ;
+		std::string name = oss.str();
+		//result_tiles_array[index].convertTo(result_tiles_array[index], CV_8U);
+		
+		//cv::imshow(name, tiles_array[index]);
+	}
+
+	// the code below isn't parametrized yet: it works only for  n_rows = 4 and n_cols = 5
+	std::vector<cv::Mat> horizontal_matrix_array;
+	horizontal_matrix_array.resize(n_rows);
+	
+	cv::Mat HM1;
+	cv::Mat HM2;
+	cv::Mat merged_mat;
+
+	cv::hconcat(result_tiles_array[0], result_tiles_array[1],HM1);
+	cv::hconcat(result_tiles_array[2],result_tiles_array[3],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[4], horizontal_matrix_array[0]);
+
+	cv::hconcat(result_tiles_array[5],result_tiles_array[6],HM1);
+	cv::hconcat(result_tiles_array[7],result_tiles_array[8],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[9],horizontal_matrix_array[1]);
+
+	cv::hconcat(result_tiles_array[10],result_tiles_array[11],HM1);
+	cv::hconcat(result_tiles_array[12],result_tiles_array[13],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[14],horizontal_matrix_array[2]);
+
+    cv::hconcat(result_tiles_array[15], result_tiles_array[16],HM1);
+	cv::hconcat(result_tiles_array[17],result_tiles_array[18],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[19],horizontal_matrix_array[3]);
+
+	/*cv::imshow("prova 0", horizontal_matrix_array[0]);
+	cv::imshow("prova 1", horizontal_matrix_array[1]);
+	cv::imshow("prova 2", horizontal_matrix_array[2]);
+	cv::imshow("prova 3", horizontal_matrix_array[3]);*/
+
+	cv::vconcat(horizontal_matrix_array[0],horizontal_matrix_array[1],HM1);
+	cv::vconcat(horizontal_matrix_array[2],horizontal_matrix_array[3],HM2);
+	cv::vconcat(HM1, HM2 ,merged_mat);
+
+	cv::imshow("merged result", merged_mat);
+	cv::imwrite(path + "Tiles/result.png", merged_mat);
+	draw_raster_from_openCV_mat ("merged result", merged_mat,  pElement);
+
+
+	cv::waitKey(0);
+	return true;
+}
+
+
 
 cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 {

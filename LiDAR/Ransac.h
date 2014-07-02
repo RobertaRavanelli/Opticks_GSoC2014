@@ -39,6 +39,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core_c.h>
 #include <opencv2/core/eigen.hpp>
+//#include <opencv2/opencv.hpp>
+
 //#include <sstream>   
 
 
@@ -119,5 +121,6 @@ public:
 	bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement);
 	bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement);
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
+	double getOrientation(std::vector<cv::Point> &pts, cv::Mat &img);
 };
 

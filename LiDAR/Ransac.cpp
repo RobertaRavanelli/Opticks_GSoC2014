@@ -477,9 +477,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
     roots (1) = 0.5f * (b - sd);
   }
 
-
-
-///// all the functions below maybe should be in another class
+//////////////////////////////////////////////////////////////// all the functions below maybe should be in another class ////////////////////////////////////////////////////////////////////////////////////
 
 bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //post_spacing is the pixel spacing of the dem matrix
 {
@@ -502,7 +500,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	   double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
 	   double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
 
-	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));  //column
+	   int mDim = static_cast<int>(std::ceil((xMax - xMin) / post_spacing));  //columns
 	   int nDim = static_cast<int>(std::ceil((yMax - yMin) / post_spacing)); //rows
 	   xMax = xMin + mDim * post_spacing;
 	   yMin = yMax - nDim * post_spacing;
@@ -569,30 +567,29 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 cv::namedWindow("dem Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
 	 cv::Mat CVdemRM8U;
 	 CVdemRM.convertTo(CVdemRM8U, CV_8U);
-	 cv::imshow("dem Row Major as seen by OpenCV CV_8U",CVdemRM8U);
+	 cv::imshow("dem Row Major as seen by OpenCV CV_8U", CVdemRM8U);
 
 	 // GENERATE THE "MEDIANED" DEM RASTER
 	 cv::Mat median_image_all;
 	 cv::medianBlur (CVdemRM, median_image_all, 5);
 	 draw_raster_from_openCV_mat ("Median filtered DEM (all)", median_image_all,  pElement);
-	/* Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> median_Eigen(median_image_all.ptr<float>(), median_image_all.rows, median_image_all.cols);
-	 draw_raster_from_eigen_mat ("Median filtered DEM (all)", median_Eigen, pElement);*/
 	
-	 cv::Mat tile = CVdemRM(cv::Rect(10,85,150,145));
-	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(tile.ptr<float>(), tile.rows, tile.cols);
+	
+	 cv::Mat test_tile = CVdemRM(cv::Rect(10,85,150,145));
+	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(test_tile.ptr<float>(), test_tile.rows, test_tile.cols);
 	 draw_raster ("tile", tile_Eigen, pElement);*/
-	 cv::Mat tile2 = CVdemRM(cv::Rect(100,100,220,50));
-	 //tile2.convertTo(tile2, CV_8U);
-	 //cv::imshow("tile2", tile2);
+	
 	 
 	 cv::Mat CVtile8U;
 	 cv::Mat CVtile32FC1;
-	 tile.convertTo(CVtile8U, CV_8U);
-	 tile.convertTo(CVtile32FC1, CV_32FC1);
-	/* draw_raster_from_openCV_mat ("prova tile (it doesn't work, it needs )", tile,  pElement);
-	 draw_raster_from_openCV_mat ("prova tile 8U", CVtile8U,  pElement);*/
+	 test_tile.convertTo(CVtile8U, CV_8U);
+	 test_tile.convertTo(CVtile32FC1, CV_32FC1);
+	 //draw_raster_from_openCV_mat ("prova tile (it doesn't work, it needs )", tile,  pElement);
+	 draw_raster_from_openCV_mat ("test tile (unsigned 8 bit)", CVtile8U,  pElement);
 	 draw_raster_from_openCV_mat ("test tile (float 32 bit)", CVtile32FC1,  pElement);
 	 
+	 
+
 	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FC1(CVtile32FC1.ptr<float>(), CVtile32FC1.rows, CVtile32FC1.cols);
 	 draw_raster_from_eigen_mat ("test tile (float 32 bit)", tile_Eigen32FC1, pElement);*/
 	 
@@ -603,28 +600,33 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 cv::namedWindow("tile Row Major as seen by OpenCV CV_32F", CV_WINDOW_AUTOSIZE);
 	 cv::imshow("tile Row Major as seen by OpenCV CV_32F",CVtile32FU);*/
 
-	 cv::imwrite(path + "tileFloatOpticks.png", tile);
+	 cv::imwrite(path + "test_tile_float_opticks.png", test_tile);
 	 //cv::imwrite(path + "tileFloatOpticks.png", tile2);
 
 	 double min;
      double max;
-     cv::minMaxIdx(tile, &min, &max);
+     cv::minMaxIdx(test_tile, &min, &max);
 	 cv::Mat tile_bis;
 
-	 cv::threshold(tile, tile_bis, badVal, max-1, cv::THRESH_BINARY_INV);
+	 cv::threshold(test_tile, tile_bis, badVal, max-1, cv::THRESH_BINARY_INV);
 
 	 cv::minMaxIdx(tile_bis, &min, &max);
 	
 
 	// int scale = 255 / (max-min));
 
-	 //tile.convertTo(tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
+	 //test_tile.convertTo(test_tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
 
-	 //cv::imwrite(path + "tilecv_8uOpticks.png", tile);
+	 //cv::imwrite(path + "tilecv_8uOpticks.png", test_tile);
 
-	 cv::Scalar tempVal = cv::mean(tile);
+	 cv::Scalar tempVal = cv::mean(test_tile);
+	 cv::Scalar tempVal2 = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
 
-	 double mean = tempVal.val[0];;
+
+	 double mean = tempVal.val[0];
+	 double mode = tempVal2.val[0];
+	 msg2 += "MEAN \n"+StringUtilities::toDisplayString(mean) + "\n"+"MODE \n"+StringUtilities::toDisplayString(mode)+ "\n";
+
 	 cv::Mat median_image;
 	 
 	 //cv::medianBlur (tile, median_image, 5);
@@ -635,21 +637,18 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 //cv::threshold(median_image, binary, 0, max, cv::THRESH_BINARY_INV);
 
 	 //* l'output di trshold è dello stesso tipo della matrice di input http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=threshold#threshold
-	 //cv::threshold(tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno (a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
-	 tile.convertTo(binary, CV_8U);
+	 //cv::threshold(test_tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno (a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
+	 test_tile.convertTo(binary, CV_8U);
 	 
 	
 	 /*binary.convertTo(CVtile32FU, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
 	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);
 */
-	 cv::threshold(tile, binary, 113, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
+	 cv::threshold(test_tile, binary, mode + 4, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
 
-	 draw_raster_from_openCV_mat ("binary op", binary,  pElement);
-	/* binary.convertTo(binary, CV_32FC1);
-	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> binary_Eigen32FU(binary.ptr<float>(), binary.rows, binary.cols);
-	 draw_raster_from_eigen_mat ("binary op", binary_Eigen32FU, pElement);*/
-	 
+	 draw_raster_from_openCV_mat ("test tile binary op", binary,  pElement);
+	
 
 	 cv::Mat fg;
 	 cv::erode(binary, fg, cv::Mat(), cv::Point(-1,-1), 2);
@@ -664,28 +663,18 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
     cv::Mat markers(binary.size(), CV_8U,cv::Scalar(0));
     markers = fg + bg;
 
+	draw_raster_from_openCV_mat ("test tile bg op", bg,  pElement);
 
-	draw_raster_from_openCV_mat ("bg op", bg,  pElement);
-	//bg.convertTo(bg, CV_32FC1);
-	//Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> bg_Eigen(bg.ptr<float>(), bg.rows, bg.cols);
-	//draw_raster_from_eigen_mat ("bg op", bg_Eigen, pElement);
+	draw_raster_from_openCV_mat ("test tile fg op", fg,  pElement);
 
-	draw_raster_from_openCV_mat ("fg op", fg,  pElement);
-	/*fg.convertTo(fg, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> fg_Eigen(fg.ptr<float>(), fg.rows, fg.cols);
-	draw_raster_from_eigen_mat ("fg op", fg_Eigen, pElement);*/
-
-	draw_raster_from_openCV_mat ("markers op", markers,  pElement);
-	/*markers.convertTo(markers, CV_32FC1);
-	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> markers_Eigen(markers.ptr<float>(), markers.rows, markers.cols);
-	draw_raster_from_eigen_mat ("Markers op", markers_Eigen, pElement);*/
-
+	draw_raster_from_openCV_mat ("test tile markers op", markers,  pElement);
+	
 
 	//markers = binary;
 	
 	markers.convertTo(markers, CV_32S);
-	tile.convertTo(tile, CV_8UC3);
-	/*imshow("boh2", tile);
+	test_tile.convertTo(test_tile, CV_8UC3);
+	/*imshow("boh2", test_tile);
     imshow("boh23", markers);*/
 
 	//* Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (>0) indices.
@@ -703,7 +692,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	// IF I UNCOMMENT THE LINES BELOW, THE PLUG-IN WILL CRASH
 	//if (tile.size==markers.size)
 	//{
-	//cv::watershed(tile, markers);
+	//cv::watershed(test_tile, markers);
 	//}
 
 	//binary.convertTo(binary, CV_8U);
@@ -1047,25 +1036,38 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 	cv::Mat binary2;
 	cv::Mat image;
 	src = cv::imread(path + image_name, 1);
+	//draw_raster_from_openCV_mat ("tile as read from file" + image_name, src,  pElement);
+	//cv::imshow("src image read as seen by OpenCV", src);
 
 	cv::Mat CVtile32FC1;
 	cv::Mat CVtile8U;
-
-	/*src.convertTo(CVtile32FC1, CV_32FC1);
+	src.convertTo(CVtile32FC1, CV_32FC1);
 	src.convertTo(CVtile8U, CV_8UC1);
-	draw_raster_from_openCV_mat ("tile0 " + image_name, CVtile32FC1,  pElement);
-	draw_raster_from_openCV_mat ("tile " + image_name, CVtile8U,  pElement);*/
+	//draw_raster_from_openCV_mat ("tile float " + image_name, CVtile32FC1,  pElement);
+	//draw_raster_from_openCV_mat ("tile uint" + image_name, CVtile8U,  pElement);
+	//cv::imshow("src image as seen by OpenCV float", CVtile32FC1);
+	//cv::imshow("src image as seen by OpenCV uint", CVtile8U);
 
 	cv::medianBlur (src, median_image, 5);
 
     image = median_image;
     //image = src;
     cv::cvtColor(image, binary, CV_BGR2GRAY);
+	/*draw_raster_from_openCV_mat ("src image " + image_name, binary,  pElement);
+	cv::imshow("src image after gray conversion as seen by OpenCV", binary);*/
 	
+
+	 cv::Scalar tempVal = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
+	 double mode = tempVal.val[0];
+	 msg2 += "\nMODE \n"+StringUtilities::toDisplayString(mode)+ "\n";
+
 
 	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
 	cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
+	//cv::threshold(binary, binary, mode+10, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); 
 	
+	//cv::imshow("src image after gray conversion as seen by OpenCV", binary);
+
 	draw_raster_from_openCV_mat (image_name + " binary sa", binary,  pElement);
 
 	// Eliminate noise and smaller objects c++
@@ -1087,8 +1089,10 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 
     cv::Mat result = segmenter.process(image);
     
-	result_tiles_array[k_for_process_all_point_cloud] = result;
-	
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	 result_tiles_array[k_for_process_all_point_cloud] = result; // this line must be commented when using only one tile //
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 	result.convertTo(result, CV_8U);
 
 	draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
@@ -1100,7 +1104,7 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);
 	
 	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
-	//cv::waitKey(0);
+	cv::waitKey(0);
 	return true;
 }
 
@@ -1177,7 +1181,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	}
 
 	
-	// the code below isn't parametrized yet: it works only for  n_rows = 4 and n_cols = 5
+	// the code below isn't generalized yet: it works only for  n_rows = 4 and n_cols = 5
 	std::vector<cv::Mat> horizontal_matrix_array;
 	horizontal_matrix_array.resize(n_rows);
 	
@@ -1200,6 +1204,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 
 	//}
 
+	
 
 	cv::hconcat(tiles_array[0],tiles_array[1],HM1);
 	cv::hconcat(tiles_array[2],tiles_array[3],HM2);
@@ -1235,7 +1240,6 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	//cv::waitKey(0);
 	return true;
 }
-
 
 bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement)
 {
@@ -1315,8 +1319,6 @@ bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* 
 	return true;
 }
 
-
-
 cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 {
 	 // https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
@@ -1335,8 +1337,8 @@ cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 		std::vector<cv::Mat> channels;
 	    cv::split( image, channels );
 	    cv::calcHist( &channels[0], 1, 0, cv::Mat(), hist0, 1, &histSize, &histRange, uniform, accumulate );
-		cv::calcHist( &channels[1], 1, 0, cv::Mat(), hist1, 1, &histSize, &histRange, uniform, accumulate );
-		cv::calcHist( &channels[2], 1, 0, cv::Mat(), hist2, 1, &histSize, &histRange, uniform, accumulate );
+	/*	cv::calcHist( &channels[1], 1, 0, cv::Mat(), hist1, 1, &histSize, &histRange, uniform, accumulate );
+		cv::calcHist( &channels[2], 1, 0, cv::Mat(), hist2, 1, &histSize, &histRange, uniform, accumulate );*/
 
 		for (int i=0; i<256 ;i++)
 		{
@@ -1344,8 +1346,9 @@ cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 			{
 				bin0=cvRound(hist0.at<float>(i));
 				mode.val[0]=i;
+
 			}
-			if (bin1<cvRound(hist1.at<float>(i)))
+		/*	if (bin1<cvRound(hist1.at<float>(i)))
 			{
 				bin1=cvRound(hist1.at<float>(i));
 				mode.val[1]=i;
@@ -1354,9 +1357,52 @@ cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 			{
 				bin2=cvRound(hist2.at<float>(i));
 				mode.val[2]=i;
-			}
+			}*/
 		}
 
+	
 		return mode;
 }
 
+double getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
+{    // http://robospace.wordpress.com/2013/10/09/object-orientation-principal-component-analysis-opencv/
+
+	 if (pts.size() == 0) return false;
+
+    //Construct a buffer used by the pca analysis
+    cv::Mat data_pts = cv::Mat(pts.size(), 2, CV_64FC1);
+    for (int i = 0; i < data_pts.rows; ++i)
+    {
+        data_pts.at<double>(i, 0) = pts[i].x;
+        data_pts.at<double>(i, 1) = pts[i].y;
+    }
+
+
+    //Perform PCA analysis
+    cv::PCA pca_analysis(data_pts, cv::Mat(), CV_PCA_DATA_AS_ROW);
+
+    ////Store the position of the object
+    //cv::Point pos = Point(pca_analysis.mean.at<double>(0, 0),
+    //                  pca_analysis.mean.at<double>(0, 1));
+
+
+    ////Store the eigenvalues and eigenvectors
+    //std::vector<cv::Point2d> eigen_vecs(2);
+    //std::vector<double> eigen_val(2);
+    //for (int i = 0; i < 2; ++i)
+    //{
+    //    eigen_vecs[i] = cv::Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
+    //                            pca_analysis.eigenvectors.at<double>(i, 1));
+
+    //    eigen_val[i] = pca_analysis.eigenvalues.at<double>(0, i);
+    //}
+
+  //  // Draw the principal components
+  //  cv::circle(img, pos, 3, CV_RGB(255, 0, 255), 2);
+  //  cv::line(img, pos, pos + 0.02 * cv::Point(eigen_vecs[0].x * eigen_val[0], eigen_vecs[0].y * eigen_val[0]) , CV_RGB(255, 255, 0));
+  //  cv::line(img, pos, pos + 0.02 * cv::Point(eigen_vecs[1].x * eigen_val[1], eigen_vecs[1].y * eigen_val[1]) , CV_RGB(0, 255, 255));
+
+  //  return atan2(eigen_vecs[0].y, eigen_vecs[0].x);
+	double a = 0;
+	return a;
+}

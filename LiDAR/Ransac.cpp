@@ -4,6 +4,7 @@ Ransac::Ransac(void)
 {
 	//path = "$(OPTICKS_CODE_DIR)/application/PlugIns/src/LiDAR/Results/";
     path = "C:/Users/Roberta/Desktop/Results/";
+	k_for_process_all_point_cloud = 0;
 }
 
 Ransac::~Ransac(void)
@@ -1055,11 +1056,12 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
     cv::cvtColor(image, binary, CV_BGR2GRAY);
 	/*draw_raster_from_openCV_mat ("src image " + image_name, binary,  pElement);
 	cv::imshow("src image after gray conversion as seen by OpenCV", binary);*/
-	
+	//cv::normalize(binary, binary, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
 	 cv::Scalar tempVal = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
 	 double mode = tempVal.val[0];
 	 msg2 += "\nMODE \n"+StringUtilities::toDisplayString(mode)+ "\n";
+
 
 
 	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
@@ -1095,13 +1097,13 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 
 	result.convertTo(result, CV_8U);
 
-	draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
+	/*draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
 
 	draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
 
 	draw_raster_from_openCV_mat (image_name + " bg sa", bg,  pElement);
 
-	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);
+	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);*/
 	
 	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
 	cv::waitKey(0);
@@ -1241,7 +1243,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	return true;
 }
 
-bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement)
+bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, PointCloudElement* pElement)
 {
 	k_for_process_all_point_cloud = 0;
 	result_tiles_array.resize(n_rows * n_cols) ;  
@@ -1273,7 +1275,7 @@ bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* 
 		//cv::imshow(name, tiles_array[index]);
 	}
 
-	// the code below isn't parametrized yet: it works only for  n_rows = 4 and n_cols = 5
+	// the code below isn't generalized yet: it works only for  n_rows = 4 and n_cols = 5
 	std::vector<cv::Mat> horizontal_matrix_array;
 	horizontal_matrix_array.resize(n_rows);
 	
@@ -1308,10 +1310,10 @@ bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* 
 
 	cv::vconcat(horizontal_matrix_array[0],horizontal_matrix_array[1],HM1);
 	cv::vconcat(horizontal_matrix_array[2],horizontal_matrix_array[3],HM2);
-	cv::vconcat(HM1, HM2 ,merged_mat);
+	cv::vconcat(HM1, HM2, merged_mat);
 
-	cv::imshow("merged result", merged_mat);
-	cv::imwrite(path + "Tiles/result.png", merged_mat);
+	cv::imshow("merged result watershed", merged_mat);
+	cv::imwrite(path + "Tiles/result_watershed.png", merged_mat);
 	draw_raster_from_openCV_mat ("merged result", merged_mat,  pElement);
 
 
@@ -1364,7 +1366,7 @@ cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 		return mode;
 }
 
-double getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
+double Ransac::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
 {    // http://robospace.wordpress.com/2013/10/09/object-orientation-principal-component-analysis-opencv/
 
 	 if (pts.size() == 0) return false;
@@ -1381,28 +1383,168 @@ double getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
     //Perform PCA analysis
     cv::PCA pca_analysis(data_pts, cv::Mat(), CV_PCA_DATA_AS_ROW);
 
-    ////Store the position of the object
-    //cv::Point pos = Point(pca_analysis.mean.at<double>(0, 0),
-    //                  pca_analysis.mean.at<double>(0, 1));
+    //Store the position of the object
+    cv::Point2i pos = cv::Point2i(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
+                     static_cast<int>(pca_analysis.mean.at<double>(0, 1)));
 
 
-    ////Store the eigenvalues and eigenvectors
-    //std::vector<cv::Point2d> eigen_vecs(2);
-    //std::vector<double> eigen_val(2);
-    //for (int i = 0; i < 2; ++i)
-    //{
-    //    eigen_vecs[i] = cv::Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
-    //                            pca_analysis.eigenvectors.at<double>(i, 1));
+    //Store the eigenvalues and eigenvectors
+    std::vector<cv::Point2d> eigen_vecs(2);
+    std::vector<double> eigen_val(2);
+    for (int i = 0; i < 2; ++i)
+    {
+        eigen_vecs[i] = cv::Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
+                                pca_analysis.eigenvectors.at<double>(i, 1));
 
-    //    eigen_val[i] = pca_analysis.eigenvalues.at<double>(0, i);
-    //}
+        eigen_val[i] = pca_analysis.eigenvalues.at<double>(0, i);
+    }
 
-  //  // Draw the principal components
-  //  cv::circle(img, pos, 3, CV_RGB(255, 0, 255), 2);
-  //  cv::line(img, pos, pos + 0.02 * cv::Point(eigen_vecs[0].x * eigen_val[0], eigen_vecs[0].y * eigen_val[0]) , CV_RGB(255, 255, 0));
-  //  cv::line(img, pos, pos + 0.02 * cv::Point(eigen_vecs[1].x * eigen_val[1], eigen_vecs[1].y * eigen_val[1]) , CV_RGB(0, 255, 255));
-
-  //  return atan2(eigen_vecs[0].y, eigen_vecs[0].x);
-	double a = 0;
-	return a;
+    // Draw the principal components
+    cv::circle(img, pos, 3, CV_RGB(255, 0, 255), 2);
+    cv::line(img, pos, pos + 0.02 * cv::Point(static_cast<int>(eigen_vecs[0].x * eigen_val[0]),static_cast<int> (eigen_vecs[0].y * eigen_val[0])) , CV_RGB(255, 255, 0));
+    cv::line(img, pos, pos + 0.02 * cv::Point(static_cast<int>(eigen_vecs[1].x * eigen_val[1]), static_cast<int>(eigen_vecs[1].y * eigen_val[1])) , CV_RGB(0, 255, 255));
+	
+    return atan2(eigen_vecs[0].y, eigen_vecs[0].x);
 }
+
+bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElement)
+{
+	// http://robospace.wordpress.com/2013/10/09/object-orientation-principal-component-analysis-opencv/
+	cv::Mat bw, img = cv::imread(path +"Tiles/" + image_name); 
+	 
+    // Convert it to greyscale
+    cv::cvtColor(img, bw, CV_BGR2GRAY);
+
+	cv::equalizeHist(bw, bw);// for the test point cloud, it improves the result, for SD point cloud it improves the results for the superior tiles, it worsens the result for the central tiles (those with buildings of H shape)
+	//cv::normalize(bw, bw, 0, 255, cv::NORM_MINMAX, CV_8UC1); // it doesn't improve but it also doesn' t worsen the result for the test point cloud; same behaviour for he SD point cloud; pratically it is useless
+
+    // Apply thresholding
+	cv::threshold(bw, bw, 150, 255, CV_THRESH_BINARY + cv::THRESH_OTSU);
+
+    // Find all objects of interest
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(bw, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+
+    // For each object
+    for (size_t i = 0; i < contours.size(); ++i)
+    {
+        // Calculate its area
+        double area = cv::contourArea(cv::Mat(contours[i]));
+		
+        // Ignore if too small or too large
+        if (area < 1e2 || 1e5 < area) continue;
+
+        // Draw the contour
+        cv::drawContours(img, contours, i, CV_RGB(255, 0, 0), 2, 8, hierarchy, 0);
+
+        // Get the object orientation
+        Ransac::getOrientation(contours[i], img);
+    }
+
+  
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	result_tiles_array[k_for_process_all_point_cloud] = img;     // this line must be commented when using only one tile //
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	/*img.convertTo(img, CV_32FC1);
+	draw_raster_from_openCV_mat ("pca result", img,  pElement);*/
+	cv::waitKey(0);
+	return true;
+}
+
+bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloudElement* pElement)
+{
+	k_for_process_all_point_cloud = 0;
+	result_tiles_array.resize(n_rows * n_cols) ;  
+	
+	 for(int i = 0; i < n_rows; i++) 
+	    {  //i is row index
+             for(int j = 0; j < n_cols; j++)
+	         {
+		       std::ostringstream oss;
+               oss << i << "_" << j << ".png";
+               std::string name = oss.str();
+			   pca_segmentation("prova"+ name, pElement);
+			  // cv::imshow("result2 " + name,  result_tiles_array[k_for_process_all_point_cloud]);
+			   k_for_process_all_point_cloud++;
+	         }
+         }
+	
+	// the code below isn't generalized yet: it works only for  n_rows = 4 and n_cols = 5
+	std::vector<cv::Mat> horizontal_matrix_array;
+	horizontal_matrix_array.resize(n_rows);
+	
+	cv::Mat HM1;
+	cv::Mat HM2;
+	cv::Mat merged_mat;
+
+	cv::hconcat(result_tiles_array[0], result_tiles_array[1],HM1);
+	cv::hconcat(result_tiles_array[2],result_tiles_array[3],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[4], horizontal_matrix_array[0]);
+
+	cv::hconcat(result_tiles_array[5],result_tiles_array[6],HM1);
+	cv::hconcat(result_tiles_array[7],result_tiles_array[8],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[9],horizontal_matrix_array[1]);
+
+	cv::hconcat(result_tiles_array[10],result_tiles_array[11],HM1);
+	cv::hconcat(result_tiles_array[12],result_tiles_array[13],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[14],horizontal_matrix_array[2]);
+
+    cv::hconcat(result_tiles_array[15], result_tiles_array[16],HM1);
+	cv::hconcat(result_tiles_array[17],result_tiles_array[18],HM2);
+	cv::hconcat(HM1,HM2,HM1);
+	cv::hconcat(HM1,result_tiles_array[19],horizontal_matrix_array[3]);
+
+	/*cv::imshow("prova 0", horizontal_matrix_array[0]);
+	cv::imshow("prova 1", horizontal_matrix_array[1]);
+	cv::imshow("prova 2", horizontal_matrix_array[2]);
+	cv::imshow("prova 3", horizontal_matrix_array[3]);*/
+
+	cv::vconcat(horizontal_matrix_array[0],horizontal_matrix_array[1],HM1);
+	cv::vconcat(horizontal_matrix_array[2],horizontal_matrix_array[3],HM2);
+	cv::vconcat(HM1, HM2, merged_mat);
+
+	cv::imshow("merged result pca", merged_mat);
+	cv::imwrite(path + "Tiles/result_pca.png", merged_mat);
+
+	
+	//cv::cvtColor(merged_mat, merged_mat, CV_BGR2GRAY);// on some point clouds, this line makes the PlugIn crash
+	
+	draw_raster_from_openCV_mat ("merged result pca", merged_mat,  pElement);
+
+
+	cv::waitKey(0);
+	return true;
+
+	
+	//return true;
+}
+
+ std::string Ransac::type_of_CVMat_2_str(int type)
+ {
+	  //http://stackoverflow.com/questions/10167534/how-to-find-out-what-type-of-a-mat-object-is-with-mattype-in-opencv
+	  std::string r;
+
+	  uchar depth = type & CV_MAT_DEPTH_MASK;
+	  uchar chans = uchar(1 + (type >> CV_CN_SHIFT));
+
+	  switch ( depth ) 
+	  {
+		case CV_8U:  r = "8U"; break;
+		case CV_8S:  r = "8S"; break;
+		case CV_16U: r = "16U"; break;
+		case CV_16S: r = "16S"; break;
+		case CV_32S: r = "32S"; break;
+		case CV_32F: r = "32F"; break;
+		case CV_64F: r = "64F"; break;
+		default:     r = "User"; break;
+	  }
+
+	  r += "C";
+	  r += (chans+'0');
+
+  return r;
+ }

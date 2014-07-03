@@ -154,7 +154,9 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    if(prova.generate_DEM(pElement, post_spacing) == true)
    {
 	  //prova.standalone_opencv("test_tile_float_opticks.png", pElement);
-	  prova.process_all_point_cloud(4, 5, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
+	   prova.process_all_point_cloud_with_watershed(4, 5, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
+	  //prova.pca_segmentation("prova0_4.png", pElement);
+	   prova.process_all_point_cloud_with_pca(4, 5, pElement);
    }
 
    //prova.generate_raster_from_intensity(pElement, post_spacing);

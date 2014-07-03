@@ -40,9 +40,8 @@
 #include <opencv2/core/core_c.h>
 #include <opencv2/core/eigen.hpp>
 //#include <opencv2/opencv.hpp>
-
-//#include <sstream>   
-
+//#include <opencv2/features2d/features2d.hpp>
+//#include <opencv2\features2d\features2d.hpp>
 
 
 namespace
@@ -94,6 +93,7 @@ public:
 	Eigen::VectorXd optimized_coefficients;
 
 	int k_for_process_all_point_cloud;
+	
 	std::string msg2;
 	std::string msg1; // statistics message
 	std::ofstream myfile;
@@ -119,8 +119,11 @@ public:
 	bool Ransac::standalone_opencv(std::string image_name,PointCloudElement* pElement);
 	bool Ransac::n_x_n_tile_generator(cv::Mat image, int n);
 	bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement);
-	bool Ransac::process_all_point_cloud(int n_rows, int n_cols, PointCloudElement* pElement);
+	bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, PointCloudElement* pElement);
+	bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloudElement* pElement);
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
-	double getOrientation(std::vector<cv::Point> &pts, cv::Mat &img);
+	double Ransac::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img);
+	bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElement);
+    std::string Ransac::type_of_CVMat_2_str(int type);
 };
 

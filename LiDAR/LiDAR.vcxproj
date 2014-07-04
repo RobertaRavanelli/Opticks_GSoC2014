@@ -93,6 +93,7 @@
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Xerces-Debug.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Qt-Debug.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\EnableWarnings.props" />
+    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\opencv-debug.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -123,6 +124,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\GSoC_2014_Opticks\opticks-sdk20140410\Dependencies\eigen-eigen-6b38706d90a9;$(OPTICKSDEPENDENCIESINCLUDE)\qt4;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>

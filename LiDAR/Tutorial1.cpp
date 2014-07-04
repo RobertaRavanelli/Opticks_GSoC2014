@@ -48,10 +48,10 @@
 #include <cmath>
 
 
-#include <gdal/gdal.h>
-#include <gdal/gdal_priv.h>
-#include <gdal/gdal_alg.h>
-//#include  <opencv2/>
+//#include <gdal/gdal.h>
+//#include <gdal/gdal_priv.h>
+//#include <gdal/gdal_alg.h>
+
 #include "StringUtilities.h"
 #include "Ransac.h"
 #include <boost/random/uniform_int.hpp>
@@ -154,7 +154,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    if(prova.generate_DEM(pElement, post_spacing) == true)
    {
 	  //prova.standalone_opencv("test_tile_float_opticks.png", pElement);
-	   prova.process_all_point_cloud_with_watershed(4, 5, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
+	   prova.process_all_point_cloud_with_watershed(4, 5, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically for now it works only with this number of rows and coulumns
 	  //prova.pca_segmentation("prova0_4.png", pElement);
 	   prova.process_all_point_cloud_with_pca(4, 5, pElement);
    }

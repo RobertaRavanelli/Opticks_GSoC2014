@@ -30,9 +30,9 @@
 #include "DesktopServices.h"
 #include "DataAccessor.h"
 #include "DataAccessorImpl.h"
-#include <gdal/gdal.h>
-#include <gdal/gdal_priv.h>
-#include <gdal/gdal_alg.h>
+//#include <gdal/gdal.h>
+//#include <gdal/gdal_priv.h>
+//#include <gdal/gdal_alg.h>
 // needed for buildings outline segmentation
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>

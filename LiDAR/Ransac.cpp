@@ -620,13 +620,14 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 
 	 //cv::imwrite(path + "tilecv_8uOpticks.png", test_tile);
 
-	 cv::Scalar tempVal = cv::mean(test_tile);
-	 cv::Scalar tempVal2 = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
-
-
-	 double mean = tempVal.val[0];
-	 double mode = tempVal2.val[0];
-	 msg2 += "MEAN \n"+StringUtilities::toDisplayString(mean) + "\n"+"MODE \n"+StringUtilities::toDisplayString(mode)+ "\n";
+	 cv::Scalar temp_mean;
+	 cv::Scalar temp_std;
+	 cv::Scalar temp_mode = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
+	 cv::meanStdDev(CVtile8U, temp_mean, temp_std, cv::Mat());
+	 double mean = temp_mean.val[0];
+	 double std = temp_std.val[0];
+	 double mode = temp_mode.val[0];
+	 msg2 += "Test tile\nMEAN \n" + StringUtilities::toDisplayString(mean) + "\n"+ "STD DEV \n"+StringUtilities::toDisplayString(std)+ "\n"  "MODE \n"+StringUtilities::toDisplayString(mode)+ "\n" + "\n";
 
 	 cv::Mat median_image;
 	 
@@ -646,11 +647,10 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
 	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);
 */
-	 cv::threshold(test_tile, binary, mode + 4, 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
+	 cv::threshold(test_tile, binary, mode + 1.1*(mean - mode), 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
 
 	 draw_raster_from_openCV_mat ("test tile binary op", binary,  pElement);
 	
-
 	 cv::Mat fg;
 	 cv::erode(binary, fg, cv::Mat(), cv::Point(-1,-1), 2);
 	 
@@ -664,11 +664,11 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
     cv::Mat markers(binary.size(), CV_8U,cv::Scalar(0));
     markers = fg + bg;
 
-	draw_raster_from_openCV_mat ("test tile bg op", bg,  pElement);
+	/*draw_raster_from_openCV_mat ("test tile bg op", bg,  pElement);
 
 	draw_raster_from_openCV_mat ("test tile fg op", fg,  pElement);
 
-	draw_raster_from_openCV_mat ("test tile markers op", markers,  pElement);
+	draw_raster_from_openCV_mat ("test tile markers op", markers,  pElement);*/
 	
 
 	//markers = binary;
@@ -706,7 +706,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing) //pos
 	//cv::imshow("markers as seen by OpenCV CV_8U",markers);
 
 
-	n_x_n_tile_generator(CVdemRM, 4);
+	//n_x_n_tile_generator(CVdemRM, 4);
 	n_x_m_tile_generator(CVdemRM, 4, 5, pElement);
 	 
 	cv::waitKey(0);
@@ -1000,7 +1000,7 @@ bool Ransac::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, 
 			{
 			if (!racc2.isValid())
 			{
-				msg2 += "Error writing output raster.";
+				msg2 += "Error writing output raster("+ name + ").";
 				return false;
 			}
 			*reinterpret_cast<float*>(racc2->getColumn()) = median_Eigen(row, col);
@@ -1058,19 +1058,25 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 	cv::imshow("src image after gray conversion as seen by OpenCV", binary);*/
 	//cv::normalize(binary, binary, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
-	 cv::Scalar tempVal = cv_matrix_mode (CVtile8U); // on the test tile of the test point cloud is 109
-	 double mode = tempVal.val[0];
-	 msg2 += "\nMODE \n"+StringUtilities::toDisplayString(mode)+ "\n";
+
+	 cv::Scalar temp_mean;
+	 cv::Scalar temp_std;
+	 cv::Scalar temp_mode = cv_matrix_mode (binary); // on the test tile of the test point cloud is 109
+	 cv::meanStdDev(binary, temp_mean, temp_std, cv::Mat());
+	 double mean = temp_mean.val[0];
+	 double std = temp_std.val[0];
+	 double mode = temp_mode.val[0];
+	 msg2 += "Tile " + StringUtilities::toDisplayString(k_for_process_all_point_cloud) + "\n" + "MEAN \n" + StringUtilities::toDisplayString(mean) + "\n"+ "STD DEV \n"+StringUtilities::toDisplayString(std)+ "\n" + "MODE \n"+StringUtilities::toDisplayString(mode)+ "\n\n";
 
 
-
+	 
 	//http://stackoverflow.com/questions/17141535/how-to-use-the-otsu-threshold-in-opencv
-	cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
-	//cv::threshold(binary, binary, mode+10, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); 
+	//cv::threshold(binary, binary, 180, 255, cv::THRESH_BINARY_INV + cv::THRESH_OTSU); // Currently, the Otsu’s method is implemented only for 8-bit images.
+	cv::threshold(binary, binary, mode + std::max(9.0, 1.1*(mean - mode)), 255, cv::THRESH_BINARY_INV); 
 	
 	//cv::imshow("src image after gray conversion as seen by OpenCV", binary);
 
-	draw_raster_from_openCV_mat (image_name + " binary sa", binary,  pElement);
+	//draw_raster_from_openCV_mat (image_name + " binary sa", binary,  pElement);
 
 	// Eliminate noise and smaller objects c++
      cv::Mat fg;
@@ -1099,7 +1105,7 @@ bool Ransac::standalone_opencv(std::string image_name, PointCloudElement* pEleme
 
 	/*draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
 
-	draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
+	/*draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
 
 	draw_raster_from_openCV_mat (image_name + " bg sa", bg,  pElement);
 
@@ -1191,23 +1197,6 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	cv::Mat HM2;
 	cv::Mat merged_mat;
 
-	//int k_bis = 0;
-	//
-	//for(int i = 0; i < n_rows; i++) 
-	//{  //i is row index
- //   // inner loop added so that more than one row of tiles written
- //      for(int j = 0; j < n_cols; j++)
-	//   { // j is col index
- //       //image_array[k] = new cv::Mat;
-
-	//	k_bis ++;
- //       }
-
-
-	//}
-
-	
-
 	cv::hconcat(tiles_array[0],tiles_array[1],HM1);
 	cv::hconcat(tiles_array[2],tiles_array[3],HM2);
 	cv::hconcat(HM1,HM2,HM1);
@@ -1237,7 +1226,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	cv::vconcat(horizontal_matrix_array[2],horizontal_matrix_array[3],HM2);
 	cv::vconcat(HM1, HM2 ,merged_mat);
 
-	cv::imshow("merged", merged_mat);
+	//cv::imshow("merged", merged_mat);
 
 	//cv::waitKey(0);
 	return true;
@@ -1367,8 +1356,7 @@ cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
 }
 
 double Ransac::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
-{    // http://robospace.wordpress.com/2013/10/09/object-orientation-principal-component-analysis-opencv/
-
+{    
 	 if (pts.size() == 0) return false;
 
     //Construct a buffer used by the pca analysis
@@ -1418,8 +1406,20 @@ bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElemen
 	cv::equalizeHist(bw, bw);// for the test point cloud, it improves the result, for SD point cloud it improves the results for the superior tiles, it worsens the result for the central tiles (those with buildings of H shape)
 	//cv::normalize(bw, bw, 0, 255, cv::NORM_MINMAX, CV_8UC1); // it doesn't improve but it also doesn' t worsen the result for the test point cloud; same behaviour for he SD point cloud; pratically it is useless
 
-    // Apply thresholding
-	cv::threshold(bw, bw, 150, 255, CV_THRESH_BINARY + cv::THRESH_OTSU);
+    
+	
+     cv::Scalar temp_mean;
+	 cv::Scalar temp_std;
+	 cv::Scalar temp_mode = cv_matrix_mode (bw); // on the test tile of the test point cloud is 109
+	 cv::meanStdDev(bw, temp_mean, temp_std, cv::Mat());
+	 double mean = temp_mean.val[0];
+	 double std = temp_std.val[0];
+	 double mode = temp_mode.val[0];
+	 msg2 += "Tile " + StringUtilities::toDisplayString(k_for_process_all_point_cloud) + "\n" + "MEAN \n"+StringUtilities::toDisplayString(mean) + "\n"+ "STD DEV \n"+StringUtilities::toDisplayString(std)+ "\n"  "MODE \n"+StringUtilities::toDisplayString(mode) + "\n" + "\n";	
+	
+	 // Apply thresholding
+	 //cv::threshold(bw, bw, 150, 255, CV_THRESH_BINARY + cv::THRESH_OTSU);
+	 cv::threshold(bw, bw, mode + 1.1*(mean - mode), 255, cv::THRESH_BINARY_INV); 
 
     // Find all objects of interest
     std::vector<std::vector<cv::Point>> contours;

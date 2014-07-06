@@ -111,14 +111,15 @@ public:
 	bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc);
 	bool Ransac::computeRootsdouble (const Eigen::Matrix3d m, Eigen::Vector3d roots);
 	bool Ransac::computeRoots2double (double b, double c, Eigen::Vector3d roots);
-	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing);
+	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing, int n_rows_tiles, int n_cols_tiles);
 	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);
 	bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement);
 	bool Ransac::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
 	bool Ransac::draw_raster_from_openCV_mat (std::string name, cv::Mat image, PointCloudElement* pElement);
-	bool Ransac::standalone_opencv(std::string image_name,PointCloudElement* pElement);
+	bool Ransac::watershed_segmentation(std::string image_name,PointCloudElement* pElement);
 	bool Ransac::n_x_n_tile_generator(cv::Mat image, int n);
 	bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement);
+	cv::Mat Ransac::merge_tiles(std::vector<cv::Mat> tiles_array, int n_rows, int n_cols);
 	bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, PointCloudElement* pElement);
 	bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloudElement* pElement);
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);

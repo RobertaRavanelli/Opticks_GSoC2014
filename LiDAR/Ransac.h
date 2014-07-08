@@ -42,6 +42,9 @@
 //#include <opencv2/opencv.hpp>
 //#include <opencv2/features2d/features2d.hpp>
 //#include <opencv2\features2d\features2d.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
 
 
 namespace

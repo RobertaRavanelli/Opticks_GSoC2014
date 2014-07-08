@@ -578,7 +578,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(test_tile.ptr<float>(), test_tile.rows, test_tile.cols);
 	 draw_raster ("tile", tile_Eigen, pElement);*/
 	
-	 
+	  
 	 cv::Mat CVtile8U;
 	 cv::Mat CVtile32FC1;
 	 test_tile.convertTo(CVtile8U, CV_8U);
@@ -666,7 +666,6 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 
 	draw_raster_from_openCV_mat ("test tile markers op", markers,  pElement);*/
 	
-
 	//markers = binary;
 	
 	markers.convertTo(markers, CV_32S);
@@ -701,10 +700,9 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	//markers.convertTo(markers, CV_8U);
 	//cv::imshow("markers as seen by OpenCV CV_8U",markers);
 
-	//n_rows = 4 and n_cols = 5 
 	//n_x_n_tile_generator(CVdemRM, 4);
 	n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles, pElement);
-	Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
+	//Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
 	 
 	cv::waitKey(0);
 	return true;
@@ -1185,7 +1183,6 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	return true;
 }
 
-
 cv::Mat Ransac::merge_tiles(std::vector<cv::Mat> tiles_array, int n_rows, int n_cols)
 {
 	std::vector<cv::Mat> rows_array;
@@ -1267,6 +1264,71 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 	cv::imshow("merged result watershed", merged_mat);
 	cv::imwrite(path + "Tiles/result_watershed.png", merged_mat);
 	draw_raster_from_openCV_mat ("merged result watershed", merged_mat,  pElement);
+
+	std::ofstream build_coor_file;
+	build_coor_file.open (std::string(path) + "building coordinates.txt");
+    build_coor_file << "i j value\n";
+
+	//cv::Mat building_raster_coor (10, 10, CV_8U);
+	boost::numeric::ublas::matrix<int> building_raster_coor(merged_mat.cols * merged_mat.rows, 2);
+
+	int cont = 0;
+    for(int i = 0; i < merged_mat.rows; i++)
+    {
+		for(int j = 0; j < merged_mat.cols; j++)
+		{
+            int value = int(merged_mat.at<uchar>(i, j));
+            //build_coor_file << i << '\t' << j<< '\t' << value<< '\n';  		
+			if (value == 128)
+			{
+				build_coor_file << i << '\t' << j << '\t' << value<< '\n';  
+			
+				building_raster_coor(cont, 0) = i;
+				building_raster_coor(cont, 1) = j;
+				cont++;
+			}
+        }
+	  build_coor_file << '\n';
+   }
+ //  build_coor_file.close();
+
+
+
+
+
+	msg2 += "building percentage "+ StringUtilities::toDisplayString(static_cast<double>(cont) / (merged_mat.rows * merged_mat.cols)) +"\n\n";
+
+	//build_coor_file << "prova lettura" << '\n';
+
+	// for(int k = 0; k < cont ; k++)
+ //   {
+	//	
+	//		build_coor_file  << k << '\t' <<building_raster_coor(k,0)<< '\t' <<building_raster_coor(k,1)<< '\n';  
+	//	
+	// }
+
+	build_coor_file.close();
+
+
+   std::vector<std::vector<cv::Point>> contours; // Detected contours. Each contour is stored as a vector of points.
+   std::vector<cv::Vec4i> hierarchy;
+   cv:: findContours( merged_mat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point2i(0, 0) );
+
+   cv::Mat drawing = cv::Mat::zeros( merged_mat.size(), CV_8UC3 );  
+   cv::RNG rng(12345);
+   for( int i = 0; i< contours.size(); i++ )
+     {
+       cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0,cv::Point2i() );
+     }
+
+   // Show in a window
+   cv::imshow("Contours", drawing);
+
+   //drawing.convertTo(drawing,  CV_8UC1);
+   //cv::cvtColor(drawing, drawing, CV_BGR2GRAY);
+   //draw_raster_from_openCV_mat ("countours", drawing,  pElement);
+
 
 	cv::waitKey(0);
 	return true;
@@ -1410,6 +1472,8 @@ bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElemen
 	/*img.convertTo(img, CV_32FC1);
 	draw_raster_from_openCV_mat ("pca result", img,  pElement);*/
 	cv::waitKey(0);
+
+
 	return true;
 }
 

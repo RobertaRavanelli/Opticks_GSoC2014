@@ -103,7 +103,7 @@ public:
 	std::string path;// ="C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
     std::vector<cv::Mat> tiles_array;
 	std::vector<cv::Mat> result_tiles_array;
-
+	cv::Mat prova;// needed for the mask applicaion
 
 	Ransac(void);
 	~Ransac(void);

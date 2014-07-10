@@ -556,10 +556,13 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 
 	   // GENERATE THE DEM RASTER
 	   draw_raster_from_eigen_mat ("DEM", demRM, pElement);
-	   
+	    msg2 += "\nDEM raster:\nwidth "+ StringUtilities::toDisplayString(demRM.rows()) + "; height "+ StringUtilities::toDisplayString(demRM.cols())+"\n\n";
+
 	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
 	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::RowMajor); 
 	  cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
+	 
+	  //prova = CVdemRM;
 	  cv::imwrite(path + "demFloatOpticks.png", CVdemRM);
 
 	  //cv::imshow("dem as seen by OpenCV",CVdem);
@@ -567,7 +570,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	  cv::Mat CVdemRM8U;
 	  CVdemRM.convertTo(CVdemRM8U, CV_8U);
 	  cv::imshow("dem Row Major as seen by OpenCV CV_8U", CVdemRM8U);
-
+	  //prova = CVdemRM8U;
 	 // GENERATE THE "MEDIANED" DEM RASTER
 	 cv::Mat median_image_all;
 	 cv::medianBlur (CVdemRM, median_image_all, 5);
@@ -598,7 +601,6 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	 cv::imshow("tile Row Major as seen by OpenCV CV_32F",CVtile32FU);*/
 
 	 cv::imwrite(path + "test_tile_float_opticks.png", test_tile);
-	 //cv::imwrite(path + "tileFloatOpticks.png", tile2);
 
 	 double min;
      double max;
@@ -702,8 +704,13 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 
 	//n_x_n_tile_generator(CVdemRM, 4);
 	n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles, pElement);
-	//Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
-	 
+
+	cv::Mat original_tiles_merged = Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
+	//cv::imshow("DEM raster after merge", original_tiles_merged);
+	msg2 += "\nDEM raster after merge:\nwidth "+ StringUtilities::toDisplayString(original_tiles_merged.rows) + "; height "+ StringUtilities::toDisplayString(original_tiles_merged.cols)+"\n\n";
+	prova = original_tiles_merged;
+	draw_raster_from_openCV_mat ("DEM raster after merge", original_tiles_merged,  pElement);
+	
 	cv::waitKey(0);
 	return true;
 }
@@ -905,7 +912,7 @@ bool Ransac::generate_point_cloud_statistics (PointCloudElement* pElement)
 	  minZ = std::min(minZ, acc->getZAsDouble(true));
       maxZ = std::max(maxZ, acc->getZAsDouble(true));
 	  
-	  points_number ++;
+	  points_number ++; 
 	  acc->nextValidPoint();//sposta l'accessor al punto successivo
    }
    acc->toIndex(0);// because I move the acccessor to the first element, in the case I need it once more
@@ -1090,10 +1097,17 @@ bool Ransac::watershed_segmentation(std::string image_name, PointCloudElement* p
 
     cv::Mat result = segmenter.process(image);
     
+	 ////////////////// DISABLED WARNINGS AS ERRORS ///////////////////////
+	// these lines are needed to remove the tiles contours (watershed al
+	 result.col(1).copyTo(result.col(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet (see http://opticks.org/irclogs/%23opticks/%23opticks.2014-05-27-Tue.txt)
+	 result.col(result.cols-2).copyTo(result.col(result.cols-1));//http://stackoverflow.com/questions/6670818/opencv-c-copying-a-row-column-in-a-mat-to-another
+	 result.row(1).copyTo(result.row(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet
+	 result.row(result.rows-2).copyTo(result.row(result.rows-1));
+
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	 result_tiles_array[k_for_process_all_point_cloud] = result; // this line must be commented when using only one tile //
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+	
 	result.convertTo(result, CV_8U);
 
 	/*draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
@@ -1137,12 +1151,12 @@ bool Ransac::n_x_n_tile_generator(cv::Mat image, int n)
 
 bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement )
 {
+	// in this way I lose some pixels (e.g. image.rows = 1361, n_rows = 10
 	int unitWidth = image.cols / n_cols; 
     int unitHeight = image.rows / n_rows; 
 	int k = 0;
 	
 	tiles_array.resize(n_rows * n_cols);
-
 
 	//This for loop generates n_rowsXn_cols tiles 
 	for(int i = 0; i < n_rows; i++) 
@@ -1177,7 +1191,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
         oss << index <<  "_" << i_ <<  "_" << j_ ;
 		std::string name = oss.str();
 
-		tiles_array[index].convertTo(tiles_array[index], CV_8UC1);
+		//tiles_array[index].convertTo(tiles_array[index], CV_8UC1);
 		//cv::imshow(name, tiles_array[index]);
 	}
 	return true;
@@ -1271,6 +1285,9 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 
 	//cv::Mat building_raster_coor (10, 10, CV_8U);
 	boost::numeric::ublas::matrix<int> building_raster_coor(merged_mat.cols * merged_mat.rows, 2);
+	
+
+	cv::Mat mask = cv::Mat::zeros(merged_mat.rows, merged_mat.cols, CV_32F);// the original dem (CVdemRM) has not the same size of merged_mat, because tile generator loses some pixels(some rows and some columns, all at the end of the raster)
 
 	int cont = 0;
     for(int i = 0; i < merged_mat.rows; i++)
@@ -1282,7 +1299,7 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 			if (value == 128)
 			{
 				build_coor_file << i << '\t' << j << '\t' << value<< '\n';  
-			
+			    mask.at<float>(i, j) = 1.0f;
 				building_raster_coor(cont, 0) = i;
 				building_raster_coor(cont, 1) = j;
 				cont++;
@@ -1292,11 +1309,26 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
    }
  //  build_coor_file.close();
 
+	prova.convertTo(prova, CV_32FC1);
+	mask.convertTo(mask, CV_8U);
+	cv::imwrite(path + "binary.png", mask);
+	mask.convertTo(mask, CV_32FC1);
+	
+	
 
+	msg2 += "\nWatershed raster:\nwidth "+ StringUtilities::toDisplayString(mask.rows) + "; height "+ StringUtilities::toDisplayString(mask.cols)+"\n\n";
 
+	try
+	{
+	    cv::Mat	output = prova.mul(mask);
+		cv::imshow("buildings", output);
+		draw_raster_from_openCV_mat ("buildings", output,  pElement);
+	}
+	catch (cv::Exception const & e) 
+	{ msg2 +=  e.what(); }
 
-
-	msg2 += "building percentage "+ StringUtilities::toDisplayString(static_cast<double>(cont) / (merged_mat.rows * merged_mat.cols)) +"\n\n";
+	msg2 += "\nbuilding percentage "+ StringUtilities::toDisplayString(static_cast<double>(cont) / (merged_mat.rows * merged_mat.cols)) +"\n\n";
+	
 
 	//build_coor_file << "prova lettura" << '\n';
 
@@ -1312,7 +1344,8 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 
    std::vector<std::vector<cv::Point>> contours; // Detected contours. Each contour is stored as a vector of points.
    std::vector<cv::Vec4i> hierarchy;
-   cv:: findContours( merged_mat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point2i(0, 0) );
+   //cv:: findContours(merged_mat, contours, hierarchy, CV_RETR_TREE, CV_RETR_CCOMP, cv::Point2i(0, 0));
+   cv::findContours(merged_mat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 
    cv::Mat drawing = cv::Mat::zeros( merged_mat.size(), CV_8UC3 );  
    cv::RNG rng(12345);
@@ -1321,6 +1354,9 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
        cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
        drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0,cv::Point2i() );
      }
+   msg2 += "\nidentified buildings "+ StringUtilities::toDisplayString(contours.size()) + "\n\n";
+   
+
 
    // Show in a window
    cv::imshow("Contours", drawing);
@@ -1465,7 +1501,14 @@ bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElemen
         Ransac::getOrientation(contours[i], img);
     }
 
-  
+	////////////////// DISABLED WARNINGS AS ERRORS ///////////////////////
+	// these lines are needed to remove the tiles contours (watershed al
+    img.col(1).copyTo(img.col(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet (see http://opticks.org/irclogs/%23opticks/%23opticks.2014-05-27-Tue.txt)
+	img.col(img.cols-2).copyTo(img.col(img.cols-1));//http://stackoverflow.com/questions/6670818/opencv-c-copying-a-row-column-in-a-mat-to-another
+	img.row(1).copyTo(img.row(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet
+	img.row(img.rows-2).copyTo(img.row(img.rows-1));
+
+
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	result_tiles_array[k_for_process_all_point_cloud] = img;     // this line must be commented when using only one tile //
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

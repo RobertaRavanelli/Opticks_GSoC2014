@@ -80,7 +80,6 @@
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\pthreads.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Xerces-Release.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\Qt-Release.props" />
-    <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\EnableWarnings.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\gdal.props" />
     <Import Project="$(OPTICKS_CODE_DIR)\application\CompileSettings\opencv-release.props" />
   </ImportGroup>

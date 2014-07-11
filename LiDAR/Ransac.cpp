@@ -1288,6 +1288,7 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 	
 
 	cv::Mat mask = cv::Mat::zeros(merged_mat.rows, merged_mat.cols, CV_32F);// the original dem (CVdemRM) has not the same size of merged_mat, because tile generator loses some pixels(some rows and some columns, all at the end of the raster)
+	cv::Mat input_for_connected_components = cv::Mat::zeros(merged_mat.rows, merged_mat.cols,  CV_32F);
 
 	int cont = 0;
     for(int i = 0; i < merged_mat.rows; i++)
@@ -1302,6 +1303,7 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 			    mask.at<float>(i, j) = 1.0f;
 				building_raster_coor(cont, 0) = i;
 				building_raster_coor(cont, 1) = j;
+				input_for_connected_components.at<float>(i,j) = 255.0f;// I could do it with threshold, in order to not consider the borders (0 values) and consider only background and buildings
 				cont++;
 			}
         }
@@ -1309,10 +1311,9 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
    }
  //  build_coor_file.close();
 
-	prova.convertTo(prova, CV_32FC1);
-	mask.convertTo(mask, CV_8U);
-	cv::imwrite(path + "binary.png", mask);
-	mask.convertTo(mask, CV_32FC1);
+	//prova.convertTo(prova, CV_32FC1);
+	cv::imwrite(path + "Tiles/buildings_for_connected_components.png", input_for_connected_components);
+	//mask.convertTo(mask, CV_32FC1);
 	
 	
 
@@ -1339,7 +1340,7 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 	//	
 	// }
 
-	build_coor_file.close();
+   build_coor_file.close();
 
 
    std::vector<std::vector<cv::Point>> contours; // Detected contours. Each contour is stored as a vector of points.
@@ -1549,6 +1550,98 @@ bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloud
 	cv::waitKey(0);
 	return true;
 }
+
+void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs)
+{
+    blobs.clear();
+
+    // Fill the label_image with the blobs
+    // 0  - background
+    // 1  - unlabelled foreground
+    // 2+ - labelled foreground
+
+    cv::Mat label_image;
+    binary.convertTo(label_image, CV_32SC1);
+
+    int label_count = 2; // starts at 2 because 0,1 are used already
+
+    for(int y=0; y < label_image.rows; y++) {
+        int *row = (int*)label_image.ptr(y);
+        for(int x=0; x < label_image.cols; x++) {
+            if(row[x] != 1) {
+                continue;
+            }
+			 
+            cv::Rect rect;
+            cv::floodFill(label_image, cv::Point(x,y), label_count, &rect, 0, 0, 4);
+
+            std::vector <cv::Point2i> blob;
+
+            for(int i=rect.y; i < (rect.y+rect.height); i++) {
+                int *row2 = (int*)label_image.ptr(i);
+                for(int j=rect.x; j < (rect.x+rect.width); j++) {
+                    if(row2[j] != label_count) {
+                        continue;
+                    }
+
+                    blob.push_back(cv::Point2i(j,i));
+                }
+            }
+
+            blobs.push_back(blob);
+
+            label_count++;
+        }
+    }
+}
+
+bool Ransac::connected_components(std::string image_name)
+{
+	//http://nghiaho.com/?p=1102
+	cv::Mat img = cv::imread(path + "Tiles/" + image_name,0);
+    if(!img.data) 
+	{
+		msg2 += "File not found";
+		return false;
+	}
+	cv::Mat output = cv::Mat::zeros(img.size(), CV_8UC3);
+
+    cv::Mat binary;
+    std::vector < std::vector<cv::Point2i > > blobs;
+	
+    cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY);
+
+   Ransac::FindBlobs(binary, blobs);
+
+    // Randomy color the blobs
+    for(size_t i=0; i < blobs.size(); i++) {
+        unsigned char r = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+        unsigned char g = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+        unsigned char b = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+
+        for(size_t j=0; j < blobs[i].size(); j++) {
+            int x = blobs[i][j].x;
+            int y = blobs[i][j].y;
+
+            output.at<cv::Vec3b>(y,x)[0] = b;
+            output.at<cv::Vec3b>(y,x)[1] = g;
+            output.at<cv::Vec3b>(y,x)[2] = r;
+        }
+    }
+
+    cv::imshow("binary", img);
+
+	//cv::namedWindow("labelled", CV_WINDOW_NORMAL);
+	
+    cv::imshow("labelled", output);
+    
+	cv::imwrite(path+"Tiles\result_con_comp.png", output);
+
+	cv::waitKey(0);
+	return true;
+}
+
+
 
  std::string Ransac::type_of_CVMat_2_str(int type)
  {

@@ -46,7 +46,6 @@
 #include <boost/numeric/ublas/io.hpp>
 
 
-
 namespace
 {
 template<typename T>
@@ -128,6 +127,8 @@ public:
 	cv::Scalar Ransac::cv_matrix_mode (cv::Mat image);
 	double Ransac::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img);
 	bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElement);
+	void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs);
+	bool Ransac::connected_components(std::string image_name);
     std::string Ransac::type_of_CVMat_2_str(int type);
 };
 

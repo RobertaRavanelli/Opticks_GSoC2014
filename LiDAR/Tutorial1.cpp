@@ -161,6 +161,9 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	   //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
 
+   //prova.connected_components("buildings_for_connected_components.png");// it's commented because it doesn't work yet: it makes the Plug-In crash
+   
+   
    //prova.generate_raster_from_intensity(pElement, post_spacing);
    progress.report("Computing RANSAC", 40, NORMAL);
    //prova.ComputeModel(pElement);

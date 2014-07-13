@@ -28,53 +28,18 @@
 #include "PointCloudView.h"
 #include "ProgressTracker.h"
 #include "PseudocolorLayer.h"
-#include "RasterElement.h"
-#include "RasterUtilities.h"
+//#include "RasterElement.h"
+//#include "RasterUtilities.h"
 #include "SpatialDataView.h"
 #include "SpatialDataWindow.h"
 #include "Statistics.h"
 #include "switchOnEncoding.h"
 #include "Undo.h"
 #include <limits>
-
-#include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
-#include <Eigen/Eigenvalues>
-//#include <Eigen/StdVector>
-//#include <Eigen/Core>
-//#include <Eigen/Geometry>
-//#include <Eigen/SVD>
-//#include <Eigen/LU>
-//#include <Eigen/Dense>
-#include <cmath>
-
-
-//#include <gdal/gdal.h>
-//#include <gdal/gdal_priv.h>
-//#include <gdal/gdal_alg.h>
-
 #include "StringUtilities.h"
 #include "Ransac.h"
-#include <boost/random/uniform_int.hpp>
-#include <boost/random/random_device.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
 
 REGISTER_PLUGIN_BASIC(LidarRoof, Tutorial1);
-
-namespace
-{
-template<typename T>
-//void assign(T* pData, int bin)
-//{
-//   *pData = static_cast<T>(bin);
-//}
-
-void updateStatistics(T* pData, double& min, double& max, double& total)
-   {
-      min = std::min(min, static_cast<double>(*pData));
-      max = std::max(max, static_cast<double>(*pData));
-      total += *pData;
-   }
-}
 
 Tutorial1::Tutorial1()
 {
@@ -121,7 +86,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    }
     
   ProgressTracker progress(pInArgList->getPlugInArgValue<Progress>(Executable::ProgressArg()),
-      "Calculating pointcloud parameters\n", "prova Roby", getDescriptorId());
+      "Identifying buildings\n", "prova Roby", getDescriptorId());
 
   PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
 
@@ -155,19 +120,22 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 
    if(prova.generate_DEM(pElement, post_spacing, n_rows,n_cols) == true)
    {
+	  progress.report("Segmenting buildings", 35, NORMAL);
 	  //prova.watershed_segmentation("test_tile_float_opticks.png", pElement);
-	   prova.process_all_point_cloud_with_watershed(n_rows, n_cols, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
+	  prova.process_all_point_cloud_with_watershed(n_rows, n_cols, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
 	  //prova.pca_segmentation("prova0_4.png", pElement);
-	   //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
+	  //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
-
-   //prova.connected_components("buildings_for_connected_components.png");// it's commented because it doesn't work yet: it makes the Plug-In crash
-   
+    
+   // it doesn't work yet, maybe for OpenCV version issues
+   prova.connected_components("buildings_for_connected_components.png");
    
    //prova.generate_raster_from_intensity(pElement, post_spacing);
-   progress.report("Computing RANSAC", 40, NORMAL);
+
+   //progress.report("Computing RANSAC", 40, NORMAL);
    //prova.ComputeModel(pElement);
 
+   progress.report("Printing messages, wait", 80, NORMAL);
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
    progress.report(prova.msg1, 100, NORMAL);
    progress.upALevel();

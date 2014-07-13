@@ -103,7 +103,6 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	return true;
 }
 
-// Up to now, the check to not select the same points doesn't work
 bool Ransac::getSamples (int  model_points)
 {
 	   //random_selected_indices.resize(model_points);
@@ -492,7 +491,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	   PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
 	   if (!acc.isValid())
 	   {
-		  msg2 += "Unable to write to point cloud.";
+		  msg2 += "Unable to write to point cloud for generating DEM.\n";
 		  return false;
 	   }
 	   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
@@ -520,7 +519,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	   {
 		  if (!acc.isValid())
 		  {
-			 msg2 += "Unable to access data.";
+			 msg2 += "Unable to access data for generating DEM.\n";
 			 return false;
 		  }
 		  if (idx % adv == 0)
@@ -562,7 +561,6 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::RowMajor); 
 	  cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
 	 
-	  //prova = CVdemRM;
 	  cv::imwrite(path + "demFloatOpticks.png", CVdemRM);
 
 	  //cv::imshow("dem as seen by OpenCV",CVdem);
@@ -570,33 +568,27 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	  cv::Mat CVdemRM8U;
 	  CVdemRM.convertTo(CVdemRM8U, CV_8U);
 	  cv::imshow("dem Row Major as seen by OpenCV CV_8U", CVdemRM8U);
-	  //prova = CVdemRM8U;
 	 // GENERATE THE "MEDIANED" DEM RASTER
 	 cv::Mat median_image_all;
 	 cv::medianBlur (CVdemRM, median_image_all, 5);
 	 draw_raster_from_openCV_mat ("Median filtered DEM (all)", median_image_all,  pElement);
 	
-	
 	 cv::Mat test_tile = CVdemRM(cv::Rect(10,85,150,145));
 	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen(test_tile.ptr<float>(), test_tile.rows, test_tile.cols);
 	 draw_raster ("tile", tile_Eigen, pElement);*/
 	
-	  
 	 cv::Mat CVtile8U;
 	 cv::Mat CVtile32FC1;
 	 test_tile.convertTo(CVtile8U, CV_8U);
 	 test_tile.convertTo(CVtile32FC1, CV_32FC1);
-	 //draw_raster_from_openCV_mat ("prova tile (it doesn't work)", tile,  pElement);
+	 //draw_raster_from_openCV_mat ("prova tile (this doesn't work)", tile,  pElement);
 	 draw_raster_from_openCV_mat ("test tile (unsigned 8 bit)", CVtile8U,  pElement);
 	 draw_raster_from_openCV_mat ("test tile (float 32 bit)", CVtile32FC1,  pElement);
 	 
-	 
 	 /*Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FC1(CVtile32FC1.ptr<float>(), CVtile32FC1.rows, CVtile32FC1.cols);
-	 draw_raster_from_eigen_mat ("test tile (float 32 bit)", tile_Eigen32FC1, pElement);*/
-	 
-	/* cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
+	 draw_raster_from_eigen_mat ("test tile (float 32 bit)", tile_Eigen32FC1, pElement);
+	 cv::namedWindow("tile Row Major as seen by OpenCV CV_8U", CV_WINDOW_AUTOSIZE);
 	 cv::imshow("tile Row Major as seen by OpenCV CV_8U",CVtile8U);
-
 	 cv::namedWindow("tile Row Major as seen by OpenCV CV_32F", CV_WINDOW_AUTOSIZE);
 	 cv::imshow("tile Row Major as seen by OpenCV CV_32F",CVtile32FU);*/
 
@@ -606,17 +598,12 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
      double max;
      cv::minMaxIdx(test_tile, &min, &max);
 	 cv::Mat tile_bis;
-
 	 cv::threshold(test_tile, tile_bis, badVal, max-1, cv::THRESH_BINARY_INV);
-
 	 cv::minMaxIdx(tile_bis, &min, &max);
 	
-
-	// int scale = 255 / (max-min));
-
-	 //test_tile.convertTo(test_tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
-
-	 //cv::imwrite(path + "tilecv_8uOpticks.png", test_tile);
+   /*int scale = 255 / (max-min));
+     test_tile.convertTo(test_tile, CV_8UC1, 255 / (max-min), -min*255/(max-min));
+     cv::imwrite(path + "tilecv_8uOpticks.png", test_tile);*/
 
 	 cv::Scalar temp_mean;
 	 cv::Scalar temp_std;
@@ -625,7 +612,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	 double mean = temp_mean.val[0];
 	 double std = temp_std.val[0];
 	 double mode = temp_mode.val[0];
-	 msg2 += "Test tile\nMEAN \n" + StringUtilities::toDisplayString(mean) + "\n"+ "STD DEV \n"+StringUtilities::toDisplayString(std)+ "\n"  "MODE \n"+StringUtilities::toDisplayString(mode)+ "\n" + "\n";
+	 msg2 += "Test tile\nMEAN\n" + StringUtilities::toDisplayString(mean) + "\n"+ "STD DEV \n"+StringUtilities::toDisplayString(std)+ "\n"  "MODE \n"+StringUtilities::toDisplayString(mode)+ "\n" + "\n";
 
 	 cv::Mat median_image;
 	 
@@ -640,11 +627,10 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	 //cv::threshold(test_tile, binary, 113.5f, max, cv::THRESH_TOZERO);// per threshold forse serve la quota del terreno (a saperla!!!): su questo tile 113 funziona bene //https://github.com/arnaudgelas/OpenCVExamples/blob/master/cvMat/Statistics/Mode/Mode.cpp
 	 test_tile.convertTo(binary, CV_8U);
 	 
-	
 	 /*binary.convertTo(CVtile32FU, CV_32FC1);
 	 Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> tile_Eigen32FUb(CVtile32FU.ptr<float>(), CVtile32FU.rows, CVtile32FU.cols);
-	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);
-*/
+	 draw_raster ("tile bin", tile_Eigen32FUb, pElement);*/
+
 	 cv::threshold(test_tile, binary, mode + 1.1*(mean - mode), 255, cv::THRESH_BINARY_INV); //113 is the z value for the ground in this tile of the test point cloud
 
 	 draw_raster_from_openCV_mat ("test tile binary op", binary,  pElement);
@@ -652,8 +638,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	 cv::Mat fg;
 	 cv::erode(binary, fg, cv::Mat(), cv::Point(-1,-1), 2);
 	 
-
-	 // Identify image pixels without objects
+	// Identify image pixels without objects
     cv::Mat bg;
     cv::dilate(binary, bg, cv::Mat(), cv::Point(-1,-1), 1);// forse sopporta solo 2 iterazioni
     cv::threshold(bg, bg, 1, 128, cv::THRESH_BINARY_INV);
@@ -663,9 +648,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
     markers = fg + bg;
 
 	/*draw_raster_from_openCV_mat ("test tile bg op", bg,  pElement);
-
 	draw_raster_from_openCV_mat ("test tile fg op", fg,  pElement);
-
 	draw_raster_from_openCV_mat ("test tile markers op", markers,  pElement);*/
 	
 	//markers = binary;
@@ -693,22 +676,18 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 	//cv::watershed(test_tile, markers);
 	//}
 
-	//binary.convertTo(binary, CV_8U);
-	//cv::imshow("binary as seen by OpenCV CV_8U",binary);
-
-	//fg.convertTo(fg, CV_8U);
-	//cv::imshow("foreground as seen by OpenCV CV_8U",fg);
-
-	//markers.convertTo(markers, CV_8U);
-	//cv::imshow("markers as seen by OpenCV CV_8U",markers);
+	/*binary.convertTo(binary, CV_8U);
+	cv::imshow("binary as seen by OpenCV CV_8U",binary);
+    fg.convertTo(fg, CV_8U);
+	cv::imshow("foreground as seen by OpenCV CV_8U",fg);
+	markers.convertTo(markers, CV_8U);
+	cv::imshow("markers as seen by OpenCV CV_8U",markers);*/
 
 	//n_x_n_tile_generator(CVdemRM, 4);
 	n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles, pElement);
 
-	cv::Mat original_tiles_merged = Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
-	//cv::imshow("DEM raster after merge", original_tiles_merged);
+    original_tiles_merged = Ransac::merge_tiles(tiles_array, n_rows_tiles, n_cols_tiles);
 	msg2 += "\nDEM raster after merge:\nwidth "+ StringUtilities::toDisplayString(original_tiles_merged.rows) + "; height "+ StringUtilities::toDisplayString(original_tiles_merged.cols)+"\n\n";
-	prova = original_tiles_merged;
 	draw_raster_from_openCV_mat ("DEM raster after merge", original_tiles_merged,  pElement);
 	
 	cv::waitKey(0);
@@ -723,7 +702,7 @@ bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float 
 	   PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
 	   if (!acc.isValid())
 	   {
-		  msg2 += "Unable to write to point cloud.";
+		  msg2 += "Unable to write to point cloud for generating intensity raster.\n";
 		  return false;
 	   }
 	   const PointCloudDataDescriptor* pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
@@ -751,7 +730,7 @@ bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float 
 	   {
 		  if (!acc.isValid())
 		  {
-			 msg2 += "Unable to access data.";
+			 msg2 += "Unable to access data for generating intensity raster.\n";
 			 return false;
 		  }
 		  if (idx % adv == 0)
@@ -814,7 +793,7 @@ bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float 
 	   if (pIntOut == NULL)
 	   {
 			//progress.report("Unable to create DEM raster.", 0, ERRORS, true);
-		   msg2 += "Unable to create DEM raster.";
+		   msg2 += "Unable to create intensity raster.\n";
 		   return false;
 	   }
 	   pIntOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
@@ -828,7 +807,7 @@ bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float 
 			if (!racc.isValid())
 			{
 				//progress.report("Error writing output raster.", 0, ERRORS, true);
-				msg2 += "Error writing output raster.";
+				msg2 += "Error writing intensity raster.";
 				return false;
 			}
 			*reinterpret_cast<float*>(racc->getColumn()) = intensity_raster(row, col);
@@ -1060,7 +1039,6 @@ bool Ransac::watershed_segmentation(std::string image_name, PointCloudElement* p
 	cv::imshow("src image after gray conversion as seen by OpenCV", binary);*/
 	//cv::normalize(binary, binary, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
-
 	 cv::Scalar temp_mean;
 	 cv::Scalar temp_std;
 	 cv::Scalar temp_mode = cv_matrix_mode (binary); // on the test tile of the test point cloud is 109
@@ -1098,7 +1076,7 @@ bool Ransac::watershed_segmentation(std::string image_name, PointCloudElement* p
     cv::Mat result = segmenter.process(image);
     
 	 ////////////////// DISABLED WARNINGS AS ERRORS ///////////////////////
-	// these lines are needed to remove the tiles contours (watershed al
+	// these lines are needed to remove the tiles contours (watershed identifies as building countours also the tile contours, and I need to remove them otherwise there are problems with the connected component method)
 	 result.col(1).copyTo(result.col(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet (see http://opticks.org/irclogs/%23opticks/%23opticks.2014-05-27-Tue.txt)
 	 result.col(result.cols-2).copyTo(result.col(result.cols-1));//http://stackoverflow.com/questions/6670818/opencv-c-copying-a-row-column-in-a-mat-to-another
 	 result.row(1).copyTo(result.row(0)); // I disabled the warning treated as errors: to re-enable, add the enable warnings property sheet
@@ -1111,14 +1089,10 @@ bool Ransac::watershed_segmentation(std::string image_name, PointCloudElement* p
 	result.convertTo(result, CV_8U);
 
 	/*draw_raster_from_openCV_mat (image_name + " final_result", result,  pElement);
-
-	/*draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
-
+	draw_raster_from_openCV_mat (image_name + " markers sa", markers,  pElement);
 	draw_raster_from_openCV_mat (image_name + " bg sa", bg,  pElement);
-
 	draw_raster_from_openCV_mat (image_name + " fg sa", fg,  pElement);*/
 	
-	//cv::findNonZero(edges(cv::Range(0, 1), cv::Range(0, edge.cols)), locs);
 	cv::waitKey(0);
 	return true;
 }
@@ -1136,8 +1110,6 @@ bool Ransac::n_x_n_tile_generator(cv::Mat image, int n)
 	   { // j is col index
         //Take the next tile in the nxn grid. Unit is the width and height of
         //each tile. i%n and i/n are just fancy ways of a double x,y for loop
-
- 
         cv::Mat subImage = image(cv::Rect(j * unitWidth, i * unitHeight, unitWidth, unitHeight));
 
         std::ostringstream oss;
@@ -1151,14 +1123,17 @@ bool Ransac::n_x_n_tile_generator(cv::Mat image, int n)
 
 bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCloudElement* pElement )
 {
-	// in this way I lose some pixels (e.g. image.rows = 1361, n_rows = 10
+	//* in this way I lose some pixels (original DEM raster has width and height greater than those of tiles merged)
+	//* however they are all on the last columns and/or last rows, so the original raster conformation is preserved 
+	//* (no problems for the image coordinates of the pixels)
+	
 	int unitWidth = image.cols / n_cols; 
     int unitHeight = image.rows / n_rows; 
 	int k = 0;
 	
 	tiles_array.resize(n_rows * n_cols);
 
-	//This for loop generates n_rowsXn_cols tiles 
+	//This for loop generates n_rows X n_cols tiles 
 	for(int i = 0; i < n_rows; i++) 
 	{  //i is row index
     // inner loop added so that more than one row of tiles written
@@ -1176,12 +1151,12 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 	   /* subImage.convertTo(CVtile32FC1, CV_32FC1);
 	    draw_raster_from_openCV_mat ("tile (float 32 bit) " + name, CVtile32FC1,  pElement);*/
 
-        imwrite(path + "Tiles/" + "prova"+ name, subImage);
+        imwrite(path + "Tiles/"+ name, subImage);
 		k++;
         }
 	}
 
-	int i_, j_;
+	/*int i_, j_;
 	for(int index = 0; index < k; index ++) 
 	{
 		j_ = index % n_cols;
@@ -1193,7 +1168,7 @@ bool Ransac::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols, PointCl
 
 		//tiles_array[index].convertTo(tiles_array[index], CV_8UC1);
 		//cv::imshow(name, tiles_array[index]);
-	}
+	}*/
 	return true;
 }
 
@@ -1254,13 +1229,12 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
 		       std::ostringstream oss;
                oss << i << "_" << j << ".png";
                std::string name = oss.str();
-               Ransac::watershed_segmentation("Tiles/prova"+ name, pElement);
-			  // cv::imshow("result2 " + name,  result_tiles_array[k_for_process_all_point_cloud]);
+               Ransac::watershed_segmentation("Tiles/"+ name, pElement);
 			   k_for_process_all_point_cloud++;
 	         }
          }
 	
-	int i, j;
+	/*int i, j;
 	for(int index = 0; index < k_for_process_all_point_cloud; index ++) 
 	{
 		j = index % n_cols;
@@ -1270,105 +1244,74 @@ bool Ransac::process_all_point_cloud_with_watershed(int n_rows, int n_cols, Poin
         oss << index <<  "_" << i <<  "_" << j ;
 		std::string name = oss.str();
 		//result_tiles_array[index].convertTo(result_tiles_array[index], CV_8U);
-		
 		//cv::imshow(name, tiles_array[index]);
-	}
+	}*/
 
 	cv::Mat merged_mat = Ransac::merge_tiles(result_tiles_array, n_rows, n_cols);
 	cv::imshow("merged result watershed", merged_mat);
 	cv::imwrite(path + "Tiles/result_watershed.png", merged_mat);
 	draw_raster_from_openCV_mat ("merged result watershed", merged_mat,  pElement);
 
-	std::ofstream build_coor_file;
+	cv::Mat mask;
+	cv::threshold(merged_mat, mask, 250.0f, 1.0f, cv::THRESH_BINARY_INV);// 255 is background; mask2 is a CV8U image, since merged image is of this type
+	mask.convertTo(mask, CV_32FC1);//I need float image to multiply with another float image
+	//Ransac::draw_raster_from_openCV_mat("mask",mask,pElement);
+
+	/*std::ofstream build_coor_file;
 	build_coor_file.open (std::string(path) + "building coordinates.txt");
     build_coor_file << "i j value\n";
-
-	//cv::Mat building_raster_coor (10, 10, CV_8U);
 	boost::numeric::ublas::matrix<int> building_raster_coor(merged_mat.cols * merged_mat.rows, 2);
-	
-
-	cv::Mat mask = cv::Mat::zeros(merged_mat.rows, merged_mat.cols, CV_32F);// the original dem (CVdemRM) has not the same size of merged_mat, because tile generator loses some pixels(some rows and some columns, all at the end of the raster)
-	cv::Mat input_for_connected_components = cv::Mat::zeros(merged_mat.rows, merged_mat.cols,  CV_32F);
-
 	int cont = 0;
+	cv::Mat mask2 = cv::Mat::zeros(merged_mat.rows, merged_mat.cols, CV_32F);// the original dem (CVdemRM) has not the same size of merged_mat, because tile generator loses some pixels(some rows and some columns, all at the end of the raster)
+	cv::Mat input_for_connected_components2 = cv::Mat::zeros(merged_mat.rows, merged_mat.cols,  CV_32F);
     for(int i = 0; i < merged_mat.rows; i++)
     {
 		for(int j = 0; j < merged_mat.cols; j++)
 		{
             int value = int(merged_mat.at<uchar>(i, j));
             //build_coor_file << i << '\t' << j<< '\t' << value<< '\n';  		
-			if (value == 128)
+			if ((value == 0) || (value == 128)) // in this way I consider the buildings (128 value) and their contours (0 value)
 			{
 				build_coor_file << i << '\t' << j << '\t' << value<< '\n';  
-			    mask.at<float>(i, j) = 1.0f;
+			    mask2.at<float>(i, j) = 1.0f;
 				building_raster_coor(cont, 0) = i;
 				building_raster_coor(cont, 1) = j;
-				input_for_connected_components.at<float>(i,j) = 255.0f;// I could do it with threshold, in order to not consider the borders (0 values) and consider only background and buildings
+				input_for_connected_components2.at<float>(i,j) = 255.0f;// I could do it with threshold, in order to not consider the borders (0 values) and consider only background and buildings
 				cont++;
 			}
         }
 	  build_coor_file << '\n';
    }
- //  build_coor_file.close();
+   build_coor_file.close();
+   msg2 += "\nbuilding percentage (pixels): "+ StringUtilities::toDisplayString(static_cast<double>(cont) / (merged_mat.rows * merged_mat.cols)) +"\n\n";
 
-	//prova.convertTo(prova, CV_32FC1);
+   build_coor_file << "prova lettura" << '\n';
+   for(int k = 0; k < cont ; k++)
+   {
+			build_coor_file  << k << '\t' <<building_raster_coor(k,0)<< '\t' <<building_raster_coor(k,1)<< '\n';  	
+   }
+   build_coor_file.close();*/
+
+	cv::Mat input_for_connected_components = mask* 255.0f;// this step isn't really needed;I do that only to see the buildings in the png image
+
+	input_for_connected_components.convertTo(input_for_connected_components, CV_8U);
 	cv::imwrite(path + "Tiles/buildings_for_connected_components.png", input_for_connected_components);
-	//mask.convertTo(mask, CV_32FC1);
 	
-	
-
 	msg2 += "\nWatershed raster:\nwidth "+ StringUtilities::toDisplayString(mask.rows) + "; height "+ StringUtilities::toDisplayString(mask.cols)+"\n\n";
 
 	try
 	{
-	    cv::Mat	output = prova.mul(mask);
-		cv::imshow("buildings", output);
+	    cv::Mat	output =  original_tiles_merged.mul(mask);
+		//cv::Mat	output =  original_tiles_merged.mul(mask2);
+		//cv::imshow("buildings", output);
 		draw_raster_from_openCV_mat ("buildings", output,  pElement);
 	}
 	catch (cv::Exception const & e) 
 	{ msg2 +=  e.what(); }
 
-	msg2 += "\nbuilding percentage "+ StringUtilities::toDisplayString(static_cast<double>(cont) / (merged_mat.rows * merged_mat.cols)) +"\n\n";
-	
-
-	//build_coor_file << "prova lettura" << '\n';
-
-	// for(int k = 0; k < cont ; k++)
- //   {
-	//	
-	//		build_coor_file  << k << '\t' <<building_raster_coor(k,0)<< '\t' <<building_raster_coor(k,1)<< '\n';  
-	//	
-	// }
-
-   build_coor_file.close();
-
-
-   std::vector<std::vector<cv::Point>> contours; // Detected contours. Each contour is stored as a vector of points.
-   std::vector<cv::Vec4i> hierarchy;
-   //cv:: findContours(merged_mat, contours, hierarchy, CV_RETR_TREE, CV_RETR_CCOMP, cv::Point2i(0, 0));
-   cv::findContours(merged_mat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-
-   cv::Mat drawing = cv::Mat::zeros( merged_mat.size(), CV_8UC3 );  
-   cv::RNG rng(12345);
-   for( int i = 0; i< contours.size(); i++ )
-     {
-       cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0,cv::Point2i() );
-     }
-   msg2 += "\nidentified buildings "+ StringUtilities::toDisplayString(contours.size()) + "\n\n";
-   
-
-
-   // Show in a window
-   cv::imshow("Contours", drawing);
-
-   //drawing.convertTo(drawing,  CV_8UC1);
-   //cv::cvtColor(drawing, drawing, CV_BGR2GRAY);
-   //draw_raster_from_openCV_mat ("countours", drawing,  pElement);
-
-
-	cv::waitKey(0);
-	return true;
+   Ransac::draw_buildings_contours(input_for_connected_components);
+   cv::waitKey(0);
+   return true;
 }
 
 cv::Scalar Ransac::cv_matrix_mode (cv::Mat image)
@@ -1524,7 +1467,7 @@ bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElemen
 bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloudElement* pElement)
 {
 	k_for_process_all_point_cloud = 0;
-	result_tiles_array.resize(n_rows * n_cols) ;  
+	result_tiles_array.resize(n_rows * n_cols);  
 	
 	 for(int i = 0; i < n_rows; i++) 
 	 {  //i is row index
@@ -1533,7 +1476,7 @@ bool Ransac::process_all_point_cloud_with_pca(int n_rows, int n_cols, PointCloud
 		std::ostringstream oss;
         oss << i << "_" << j << ".png";
         std::string name = oss.str();
-		pca_segmentation("prova"+ name, pElement);
+		pca_segmentation(name, pElement);
 		// cv::imshow("result2 " + name,  result_tiles_array[k_for_process_all_point_cloud]);
 		k_for_process_all_point_cloud++;
 	    }
@@ -1561,26 +1504,48 @@ void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Poin
     // 2+ - labelled foreground
 
     cv::Mat label_image;
-    binary.convertTo(label_image, CV_32SC1);
+    //binary.convertTo(label_image, CV_32SC1);
+	//binary.convertTo(label_image, CV_8UC1);
+	binary.convertTo(label_image, CV_32FC1);
 
     int label_count = 2; // starts at 2 because 0,1 are used already
 
-    for(int y=0; y < label_image.rows; y++) {
+    /* for(int y=0; y < label_image.rows; y++) 
+	{
         int *row = (int*)label_image.ptr(y);
-        for(int x=0; x < label_image.cols; x++) {
-            if(row[x] != 1) {
+        for(int x=0; x < label_image.cols; x++) 
+		{
+            if(row[x] != 1) 
+			{
                 continue;
             }
 			 
             cv::Rect rect;
-            cv::floodFill(label_image, cv::Point(x,y), label_count, &rect, 0, 0, 4);
+			
+			//* http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html
+			//* floodFill fills a connected component with the given color
+			//* the problem is here (..\OpenCV-2.2.0\modules\imgproc\src\floodfill.cpp:1046: error: (-210))
+			//* maybe depends from the OpenCV version (they have different implementation): on 249 version it works
+           try
+		   {
+			//cv::floodFill(label_image, cv::Point(x,y), label_count, &rect, 0, 0, 4);
+			cv::floodFill(label_image, cv::Point(x,y), cv::Scalar(label_count), &rect, cv::Scalar(0), cv::Scalar(0), 4);
+		   }
+		   catch (cv::Exception const & e) 
+	       { 
+			   msg2 += "\nProblem in finding blob: ";
+			   msg2 +=  e.what(); 
+		   }
 
             std::vector <cv::Point2i> blob;
 
-            for(int i=rect.y; i < (rect.y+rect.height); i++) {
+            for(int i=rect.y; i < (rect.y+rect.height); i++) 
+			{
                 int *row2 = (int*)label_image.ptr(i);
-                for(int j=rect.x; j < (rect.x+rect.width); j++) {
-                    if(row2[j] != label_count) {
+                for(int j=rect.x; j < (rect.x+rect.width); j++)
+				{
+                    if(row2[j] != label_count) 
+					{
                         continue;
                     }
 
@@ -1592,16 +1557,55 @@ void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Poin
 
             label_count++;
         }
-    }
+    }*/
+
+	// http://areshopencv.blogspot.it/2011/12/blob-detection-connected-component-pure.html
+
+	for(int y=0; y < binary.rows; y++)
+	{// y is row index
+                for(int x=0; x < binary.cols; x++) 
+				{// x is column index
+                    float checker = label_image.at<float>(y,x); //need to look for float and not int as the scalar value is of type double
+                    cv::Rect rect;
+                    if(checker == 1) 
+					{
+                        //fill region from a point
+                        cv::floodFill(label_image, cv::Point(x,y), cv::Scalar(label_count), &rect, cv::Scalar(0), cv::Scalar(0), 4);
+                        label_count++;
+                        
+                        //a vector of all points in a blob
+                        std::vector<cv::Point> blob;
+
+                        for(int i=rect.y; i < (rect.y+rect.height); i++)
+						{
+                            for(int j=rect.x; j < (rect.x+rect.width); j++)
+							{
+                                float chk = label_image.at<float>(i,j);
+                                if(chk == label_count-1) 
+								{
+                                    blob.push_back(cv::Point(j,i));
+                                }                        
+                            }
+                        }
+                        //place the points of a single blob in a grouping
+                        //a vector of vector points
+                        blobs.push_back(blob);
+                    }
+                }
+            }
+           
+            //cv::imshow("label image",label_image);
+	       msg2 +="\n"+ StringUtilities::toDisplayString(label_count) + " identified buildings with connected components\n\n";
+	
 }
 
 bool Ransac::connected_components(std::string image_name)
 {
 	//http://nghiaho.com/?p=1102
-	cv::Mat img = cv::imread(path + "Tiles/" + image_name,0);
+	cv::Mat img = cv::imread(path + "Tiles/" + image_name, 0);
     if(!img.data) 
 	{
-		msg2 += "File not found";
+		msg2 += image_name + " not found: couldn't apply connected components";
 		return false;
 	}
 	cv::Mat output = cv::Mat::zeros(img.size(), CV_8UC3);
@@ -1629,9 +1633,7 @@ bool Ransac::connected_components(std::string image_name)
         }
     }
 
-    cv::imshow("binary", img);
-
-	//cv::namedWindow("labelled", CV_WINDOW_NORMAL);
+    //cv::imshow("binary", img);
 	
     cv::imshow("labelled", output);
     
@@ -1641,7 +1643,31 @@ bool Ransac::connected_components(std::string image_name)
 	return true;
 }
 
+bool Ransac::draw_buildings_contours(cv::Mat image)
+{
+	 std::vector<std::vector<cv::Point>> contours; // Detected contours. Each contour is stored as a vector of points.
+     std::vector<cv::Vec4i> hierarchy;
+     cv:: findContours(image, contours, hierarchy, CV_RETR_TREE, CV_RETR_CCOMP, cv::Point2i(0, 0));
+     //cv::findContours(merged_mat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 
+     cv::Mat drawing = cv::Mat::zeros(image.size(), CV_8UC3);  
+     cv::RNG rng(12345);
+     for( int i = 0; i< contours.size(); i++ )
+     {
+        cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0,cv::Point2i() );
+     }
+     msg2 += "\n" + StringUtilities::toDisplayString(contours.size()) + " identified buildings with find contours method\n\n";
+   
+     // Show in a window
+     cv::imshow("Building contours", drawing);
+
+     //drawing.convertTo(drawing,  CV_8UC1);
+     //cv::cvtColor(drawing, drawing, CV_BGR2GRAY);
+     //draw_raster_from_openCV_mat ("countours", drawing,  pElement);
+
+	 return true;
+}
 
  std::string Ransac::type_of_CVMat_2_str(int type)
  {

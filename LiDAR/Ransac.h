@@ -13,7 +13,7 @@
 #include "SpatialDataView.h"
 #include "SpatialDataWindow.h"
 #include "Statistics.h"
-#include "switchOnEncoding.h"
+#include "switchOnEncoding.h" 
 #include "Undo.h"
 #include <limits>
 #include <boost/random/uniform_int.hpp>
@@ -85,25 +85,30 @@ public:
 class Ransac
 {
 public:
-	
+    
+	std::string msg2;
+	std::string msg1; // statistics message
+	std::ofstream myfile;
+	std::string path;// ="C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
+
+	//* RANSAC ALGORITHM VARIABLES
 	Eigen::VectorXd  model_coefficients;
-	 
 	std::vector<int> random_selected_indices;
     const PointCloudDataDescriptor* pDesc;
 	std::vector<int> inliers; // it contains the inliers indexes (their ID) for the single iterations
 	int nr_p;//NUMBER OF THE INLIERS for the single iterations
 	Eigen::VectorXd optimized_coefficients;
 
+	//* VARIABLES NEEDED FOR SEGMENTATION
 	int k_for_process_all_point_cloud;
+    std::vector<cv::Mat> tiles_array; // stores the tiles in which the original raster is divided
+	std::vector<cv::Mat> result_tiles_array; // stores the result of the segmentation algorithm
+	//* ORIGINAL_TILES_MERGED is the real raster input for all the processing methods of the Plug-In,
+	//* since the way I use to tile the original raster makes lose some pixels
+	//* (however they are all on the last columns and/or last rows, so the original raster conformation is preserved - no problems for the image coordinates of the pixels)
+	//* for example, original_tiles_merged is needed for the mask application (method use to retrieve the z coordinate of every pixel identified as belonging to a building)
+	cv::Mat original_tiles_merged;
 	
-	std::string msg2;
-	std::string msg1; // statistics message
-	std::ofstream myfile;
-	std::string path;// ="C:/Users/Roberta/Desktop/Universita/GSoC_2014_Opticks/SampleData/";
-    std::vector<cv::Mat> tiles_array;
-	std::vector<cv::Mat> result_tiles_array;
-	cv::Mat prova;// needed for the mask applicaion
-
 	Ransac(void);
 	~Ransac(void);
 	bool Ransac::ComputeModel(PointCloudElement* pElement);
@@ -129,6 +134,7 @@ public:
 	bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElement);
 	void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs);
 	bool Ransac::connected_components(std::string image_name);
+	bool Ransac::draw_buildings_contours(cv::Mat image);
     std::string Ransac::type_of_CVMat_2_str(int type);
 };
 

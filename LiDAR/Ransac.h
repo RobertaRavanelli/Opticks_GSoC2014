@@ -133,7 +133,7 @@ public:
 	double Ransac::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img);
 	bool Ransac::pca_segmentation(std::string image_name, PointCloudElement* pElement);
 	void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs);
-	bool Ransac::connected_components(std::string image_name);
+	bool Ransac::connected_components(std::string image_name, PointCloudElement* pElement);
 	bool Ransac::draw_buildings_contours(cv::Mat image);
     std::string Ransac::type_of_CVMat_2_str(int type);
 };

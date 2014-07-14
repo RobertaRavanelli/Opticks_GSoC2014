@@ -127,8 +127,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	  //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
     
-   // it doesn't work yet, maybe for OpenCV version issues
-   prova.connected_components("buildings_for_connected_components.png");
+   prova.connected_components("buildings_for_connected_components.png", pElement);
    
    //prova.generate_raster_from_intensity(pElement, post_spacing);
 

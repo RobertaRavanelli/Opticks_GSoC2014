@@ -1599,7 +1599,7 @@ void Ransac::FindBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Poin
 	
 }
 
-bool Ransac::connected_components(std::string image_name)
+bool Ransac::connected_components(std::string image_name,  PointCloudElement* pElement)
 {
 	//http://nghiaho.com/?p=1102
 	cv::Mat img = cv::imread(path + "Tiles/" + image_name, 0);
@@ -1609,36 +1609,49 @@ bool Ransac::connected_components(std::string image_name)
 		return false;
 	}
 	cv::Mat output = cv::Mat::zeros(img.size(), CV_8UC3);
+	cv::Mat classified_buildings = cv::Mat::zeros(img.size(), CV_8UC1);
 
-    cv::Mat binary;
-    std::vector < std::vector<cv::Point2i > > blobs;
+   cv::Mat binary;
+   std::vector < std::vector<cv::Point2i> > blobs;
 	
-    cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY);
+   cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY);
 
    Ransac::FindBlobs(binary, blobs);
 
+   float dem_spacing = 5.0f;// this must be a function parameter
+
+
     // Randomy color the blobs
-    for(size_t i=0; i < blobs.size(); i++) {
+    for(int i = 0; i < blobs.size(); i++)
+	{// i index is the building (blob) index
         unsigned char r = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
         unsigned char g = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
         unsigned char b = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
 
-        for(size_t j=0; j < blobs[i].size(); j++) {
-            int x = blobs[i][j].x;
-            int y = blobs[i][j].y;
+		// Here I need store coordinate 3x blobs[i].size()
+        for(int j = 0; j < blobs[i].size(); j++) 
+		{// j index is the pixel index for the single building ()
+            int pixel_column = blobs[i][j].x;
+            int pixel_row = blobs[i][j].y;			
 
-            output.at<cv::Vec3b>(y,x)[0] = b;
-            output.at<cv::Vec3b>(y,x)[1] = g;
-            output.at<cv::Vec3b>(y,x)[2] = r;
+			double x_building = pixel_column * dem_spacing; // object coordinate 
+			double y_building = pixel_row * dem_spacing; // object coordinate
+			double z_building = original_tiles_merged.at<float>(pixel_row, pixel_column);//object coordinate
+
+			classified_buildings.at<uchar>(pixel_row, pixel_column) = i;
+
+            output.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+            output.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+            output.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
         }
     }
 
-    //cv::imshow("binary", img);
 	
-    cv::imshow("labelled", output);
+	draw_raster_from_openCV_mat ("classsified buildings", classified_buildings,  pElement);
+	
+    //cv::imshow("RGB classsified buildings", output);
     
 	cv::imwrite(path+"Tiles\result_con_comp.png", output);
-
 	cv::waitKey(0);
 	return true;
 }

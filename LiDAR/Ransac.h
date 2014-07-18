@@ -86,6 +86,8 @@ class Ransac
 {
 public:
     
+	Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> prova33;
+	 
 	std::string msg2;
 	std::string msg1; // statistics message
 	std::ofstream myfile;
@@ -96,7 +98,7 @@ public:
 	std::vector<int> random_selected_indices;
     const PointCloudDataDescriptor* pDesc;
 	std::vector<int> inliers; // it contains the inliers indexes (their ID) for the single iterations
-	int nr_p;//NUMBER OF THE INLIERS for the single iterations
+	int nr_p;//NUMBER OF THE INLIERS for the single iteration
 	Eigen::VectorXd optimized_coefficients;
 
 	//* VARIABLES NEEDED FOR SEGMENTATION
@@ -116,6 +118,14 @@ public:
 	bool Ransac::computeModelCoefficients (PointCloudAccessor acc);
 	bool Ransac::countWithinDistance(double threshold, PointCloudAccessor acc);
 	bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc);
+
+	// ALL THE METHOD WITH THE 2 NUMBER CAN BE APPLIED TO AN EIGEN MATRIX(AND NOT THE PELEMENT)
+	bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+	bool Ransac::getSamples2 (int model_points,int size_array);
+	bool Ransac::computeModelCoefficients2 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+	bool Ransac::countWithinDistance2(double threshold,  Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+	bool Ransac::optimizeModelCoefficients2(Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+
 	bool Ransac::computeRootsdouble (const Eigen::Matrix3d m, Eigen::Vector3d roots);
 	bool Ransac::computeRoots2double (double b, double c, Eigen::Vector3d roots);
 	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing, int n_rows_tiles, int n_cols_tiles);

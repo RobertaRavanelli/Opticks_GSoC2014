@@ -38,6 +38,7 @@
 #include <limits>
 #include "StringUtilities.h"
 #include "Ransac.h"
+#include <time.h>
 
 REGISTER_PLUGIN_BASIC(LidarRoof, Tutorial1);
 
@@ -131,8 +132,71 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    
    //prova.generate_raster_from_intensity(pElement, post_spacing);
 
-   //progress.report("Computing RANSAC", 40, NORMAL);
-   //prova.ComputeModel(pElement);
+   progress.report("Computing RANSAC", 40, NORMAL);
+   prova.ComputeModel(pElement);
+
+   /*prova.computeModelCoefficients2(prova.prova33);
+   prova.optimizeModelCoefficients2(prova.prova33);*/
+
+   // this part is used o test the ransac implementation:
+   // it must return a=0, b=0, c=1 and d=-10: the plane Z=10
+   prova.msg2 += "___________________________\n\n";
+
+   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
+   matrix.setConstant(1010, 3, 0.0);
+
+
+   for (int i =0; i< 1000; i++)
+   {
+	     matrix(i,0) = i*i;// % 100;
+		 srand (time(NULL));
+	     matrix(i,1) = 5*i+21;// rand() % 33;
+	     matrix(i,2) = 10.0;
+
+   }
+
+   for (int i =1000; i< 1010; i++)
+   {
+	     matrix(i,0) = rand() % 10;
+	     matrix(i,1) = rand() % 200;
+	     matrix(i,2) = rand() % 700;
+   }
+
+   /* matrix(0,1) = 0.0;
+	matrix(0,1) = 0.0;
+	matrix(0,2) = 1.0;
+
+	matrix(1,0) = 7.0;
+	matrix(1,1) = 5.0;
+	matrix(1,2) = 14.0;
+
+	matrix(2,0) = 17.0;
+	matrix(2,1) = 3.0;
+	matrix(2,2) = 28.0;*/
+
+	/*matrix(3,0) = 3.0;
+	matrix(3,1) = 3.0;
+	matrix(3,2) = 7.0;
+
+	matrix(3,0) = 4.0;
+	matrix(3,1) = 4.0;
+	matrix(3,2) = 9.0;
+
+	matrix(3,0) = 5.0;
+	matrix(3,1) = 3.0;
+	matrix(3,2) = 10.0;*/
+
+   prova.nr_p = 0;
+   //prova.ComputeModel2(matrix);
+   
+   if (prova.getSamples2 (3,matrix.rows())==true)
+   {
+   
+   prova.computeModelCoefficients2(matrix);
+   prova.countWithinDistance2(  0.00000001, matrix);
+   prova.optimizeModelCoefficients2(matrix);
+   }
+   prova.msg2 += "\n___________________________\n\n";
 
    progress.report("Printing messages, wait", 80, NORMAL);
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning

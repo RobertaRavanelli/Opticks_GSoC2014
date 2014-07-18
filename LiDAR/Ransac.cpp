@@ -5,16 +5,18 @@ Ransac::Ransac(void)
 	//path = "$(OPTICKS_CODE_DIR)/application/PlugIns/src/LiDAR/Results/";
     path = "C:/Users/Roberta/Desktop/Results/";
 	k_for_process_all_point_cloud = 0;
+	
 }
 
 Ransac::~Ransac(void)
 {
+
 }
 
 bool Ransac::ComputeModel(PointCloudElement* pElement)
 {
 	double probability_= 0.99;        // probability that at least one of the random samples of s (for us 3) points is free from outliers
-	int max_iterations_ = 200000;     // safeguard against being stuck in this loop forever
+	int max_iterations_ = 1;//200000;     // safeguard against being stuck in this loop forever
 	nr_p = 0;
 
 	if (pElement == NULL)
@@ -29,7 +31,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	 PointCloudAccessor acc(pElement->getPointCloudAccessor(req.release()));
 
 	 int minimum_model_points = 3;
-	 double ransac_threshold = 0.02;
+	 double ransac_threshold = 0.00000001;// 0.02;
 
 	 int iterations_ = 0;
      int n_best_inliers_count = -INT_MAX;
@@ -96,6 +98,90 @@ bool Ransac::ComputeModel(PointCloudElement* pElement)
 	    RANSAC_results_file << final_inliers[i] << '\t'; 
 	}
 
+	// Remember that if we want to denormalize the model coefficients we must multiply all the parameters for radq(a^2+b^2+c^2)
+	msg2 += "\n\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n';// verifica
+	msg2 += "------------------------------------------------\n\n";
+	RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
+	RANSAC_results_file.close();
+	
+	return true; 
+}
+
+bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+{
+	double probability_= 0.99;        // probability that at least one of the random samples of s (for us 3) points is free from outliers
+	int max_iterations_ = 200000;     // safeguard against being stuck in this loop forever
+	nr_p = 0;
+
+	 int minimum_model_points = 3;
+	 double ransac_threshold = 0.00000001;// 0.02;
+
+	 int iterations_ = 0;
+     int n_best_inliers_count = -INT_MAX;
+
+	 double k = 1.0;
+
+     Eigen::VectorXd final_model_coefficients;// the coefficients corrispondent to the max number of inliers
+	 std::vector<int> final_inliers;
+
+     double log_probability  = log (1.0 - probability_);
+     double one_over_indices = 1.0 / static_cast<double> (pDesc->getPointCount());
+
+	// Iterate
+    while (iterations_ < k && iterations_ <  max_iterations_)
+    {
+		//msg2 += "\nIteration "+ StringUtilities::toDisplayString(iterations_)+'\n';
+		
+		// Get the 3 samples which satisfy the plane model criteria
+		if (getSamples2(minimum_model_points, data.rows()) == true)
+		{
+			computeModelCoefficients2(data);
+			
+			// Select the inliers that are within threshold_ from the model
+			countWithinDistance2(ransac_threshold, data);
+
+			if (nr_p > n_best_inliers_count)
+			{
+				n_best_inliers_count = nr_p;
+				
+				final_model_coefficients = model_coefficients;
+				final_inliers = inliers;
+				// Compute the k parameter (k=log(z)/log(1-w^n))
+				double w = static_cast<double> (n_best_inliers_count) * one_over_indices; // w is the probability that any selected data point is an inlier (e=1-w: probability that a point is an outlier)
+				double p_no_outliers = 1.0 - pow (w, static_cast<double> (minimum_model_points)); // w^3 probability of choosing 3 inliers in a row (sample only contains inliers)
+				p_no_outliers = (std::max) (std::numeric_limits<double>::epsilon (), p_no_outliers);         // Avoid division by -Inf
+				p_no_outliers = (std::min) (1.0 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
+				k = log_probability / log (p_no_outliers);
+			}
+			nr_p = 0;
+			++iterations_;
+		}
+	}
+	//needed to the optimizeModelCoefficients method
+	nr_p = n_best_inliers_count;
+	inliers = final_inliers;
+	
+	//// writing the results on a file
+	std::ofstream RANSAC_results_file;
+	RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
+    RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
+
+	msg2 += "------ RANSAC final results -------\n";
+	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	if (optimizeModelCoefficients2(data) == true)
+	{
+			final_model_coefficients = optimized_coefficients;
+    }
+	
+	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_) + " on " + StringUtilities::toDisplayString(k) + " needed\n\n";
+	msg2 += "inliers found:  " + StringUtilities::toDisplayString(n_best_inliers_count)+"\n";
+	for(size_t i = 0; i < n_best_inliers_count; i++)
+	{
+		msg2 +=  StringUtilities::toDisplayString(final_inliers[i])+" ";
+	    RANSAC_results_file << final_inliers[i] << '\t'; 
+	}
+
+	// Remember that if we want to denormalize the model coefficients we must multiply all the parameters for radq(a^2+b^2+c^2)
 	msg2 += "\n\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
 	RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
 	RANSAC_results_file.close();
@@ -166,29 +252,63 @@ bool Ransac::getSamples (int  model_points)
 		  random_selected_indices[i] = point_index;
 	   }
 
-	   //msg2 = "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+' '+ StringUtilities::toDisplayString(random_selected_indices[1])+' '+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
+	   msg2 += "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+' '+ StringUtilities::toDisplayString(random_selected_indices[1])+' '+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
 	   return true;
 }
+
+bool Ransac::getSamples2 (int model_points,int size_array)
+{
+	 int while_counter = 0;
+
+	   random_selected_indices.resize(model_points);
+	   int point_index = -1;
+	   //http://www.boost.org/doc/libs/1_55_0/doc/html/boost_random/tutorial.html#boost_random.tutorial.generating_a_random_password.c5
+	   boost::random::random_device rng;
+	   boost::random::uniform_int_distribution<> index_dist(0, size_array - 1);
+  
+	   for (size_t i = 0; i < model_points; ++i)
+	   {
+		   int a = index_dist(rng);
+		   //a check not to select the same points
+		   while(point_index == a)
+		   {
+			   while_counter ++;
+			   if (while_counter > 10000)
+			   {
+			       msg2 += "Not able to find 3 different points \n\n";
+				   return false;
+			   }
+		   }
+		  point_index = a;
+		  random_selected_indices[i] = point_index;
+	   }
+
+	  msg2 += "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+' '+ StringUtilities::toDisplayString(random_selected_indices[1])+' '+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
+	   return true;
+}
+
+
 
 bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 {
 		/////////////////////      RETRIEVE DATA FROM POINTCLOUDS       ///////////////////
 		Eigen::Array4d p0, p1, p2;//store for the 3 random selected points
-	
+	    prova33.setConstant(3, 3, 0.0);
+
 		acc->toIndex(random_selected_indices[0]);
-		p0[0] = acc->getXAsDouble(true);
-		p0[1] = acc->getYAsDouble(true);
-		p0[2] = acc->getZAsDouble(true);
+		prova33(0,0) = p0[0] = acc->getXAsDouble(true);
+		prova33(0,1) = p0[1] = acc->getYAsDouble(true);
+		prova33(0,2) = p0[2] = acc->getZAsDouble(true);
 
 		acc->toIndex(random_selected_indices[1]);
-		p1[0] = acc->getXAsDouble(true);
-		p1[1] = acc->getYAsDouble(true);
-		p1[2] = acc->getZAsDouble(true);
+		prova33(1,0) = p1[0] = acc->getXAsDouble(true);
+		prova33(1,1) = p1[1] = acc->getYAsDouble(true);
+		prova33(1,2) = p1[2] = acc->getZAsDouble(true);
 
 		acc->toIndex(random_selected_indices[2]);
-		p2[0] = acc->getXAsDouble(true);
-		p2[1] = acc->getYAsDouble(true);
-		p2[2] = acc->getZAsDouble(true);
+		prova33(2,0) = p2[0] = acc->getXAsDouble(true);
+		prova33(2,1) = p2[1] = acc->getYAsDouble(true);
+		prova33(2,2) = p2[2] = acc->getZAsDouble(true);
 
 		acc->toIndex(0);
 
@@ -231,6 +351,75 @@ bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 		return true;
 }
 
+bool Ransac::computeModelCoefficients2 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+{
+		/////////////////////      RETRIEVE DATA FROM POINTCLOUDS       ///////////////////
+		Eigen::Array4d p0, p1, p2;//store for the 3 random selected points
+	
+		//These 3 lines are only to see if the method works: to test it with the same input of the method with the accessor
+	    /*random_selected_indices[0] = 0;
+	    random_selected_indices[1] = 1;
+	    random_selected_indices[2] = 2;*/
+
+		//acc->toIndex(random_selected_indices[0]);
+		p0[0] = data(random_selected_indices[0], 0); // x
+		p0[1] = data(random_selected_indices[0], 1); // y
+		p0[2] = data(random_selected_indices[0], 2); // z
+
+		//acc->toIndex(random_selected_indices[1]);
+		p1[0] = data(random_selected_indices[1], 0); // x
+		p1[1] = data(random_selected_indices[1], 1); // y
+		p1[2] = data(random_selected_indices[1], 2); // z
+
+		//acc->toIndex(random_selected_indices[2]);
+		p2[0] = data(random_selected_indices[2], 0); // x
+		p2[1] = data(random_selected_indices[2], 1); // y
+		p2[2] = data(random_selected_indices[2], 2); // z
+		
+		/////////////////// FIND PLANE COEFFICIENTS ///////////////////////////////////////
+  
+		/*http://www.cplusplus.com/forum/general/74720/
+		normal = cross_product(b-a, c-a) = cross_product(p1-p0, p2-p0)
+		distance = dot_product(normal, P): P is a point in the plane, like a, b or c */
+  
+		//  Compute the segment values (in 3d) between p1 and p0
+		Eigen::Array4d p1p0 = p1 - p0;
+
+		// Compute the segment values (in 3d) between p2 and p0
+		Eigen::Array4d p2p0 = p2 - p0;
+
+		// dy1dy2: useful to check for collinearity 
+		Eigen::Array4d dy1dy2 = (p1-p0) / (p2-p0);
+
+		if ( (dy1dy2[0] == dy1dy2[1]) && (dy1dy2[2] == dy1dy2[1])  )  // Check for collinearity
+		{ 
+			msg2 += "The selected points are collinear: repeat the selection\n\n";
+			return false;
+		}
+  
+		// Compute the plane coefficients from the 3 given points in a straightforward manner
+		// calculate the plane normal n = (p2-p1) x (p3-p1) = cross (p2-p1, p3-p1)
+		model_coefficients.resize (4);
+		model_coefficients[0] = p1p0[1] * p2p0[2] - p1p0[2] * p2p0[1];
+		model_coefficients[1] = p1p0[2] * p2p0[0] - p1p0[0] * p2p0[2];
+		model_coefficients[2] = p1p0[0] * p2p0[1] - p1p0[1] * p2p0[0];
+		model_coefficients[3] = 0;
+
+		//msg2 += "Paassaggio intermedio per optimize array\n"+StringUtilities::toDisplayString(model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(model_coefficients[1])+'\n'+StringUtilities::toDisplayString(model_coefficients[2])+'\n'+StringUtilities::toDisplayString(model_coefficients[3])+'\n'+'\n';// verifica
+
+		// Normalize
+		model_coefficients.normalize();
+
+		//msg2 += "Nrmalizzazione array\n"+StringUtilities::toDisplayString(model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(model_coefficients[1])+'\n'+StringUtilities::toDisplayString(model_coefficients[2])+'\n'+StringUtilities::toDisplayString(model_coefficients[3])+'\n'+'\n';
+
+		// ax + by + cz + d = 0
+		model_coefficients[3] = -1 * (model_coefficients.template head<4>().dot (p0.matrix ()));
+
+		msg2 += "Approximated plane parameters array\n"+StringUtilities::toDisplayString(model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(model_coefficients[1])+'\n'+StringUtilities::toDisplayString(model_coefficients[2])+'\n'+StringUtilities::toDisplayString(model_coefficients[3])+'\n'+'\n';// verifica
+		msg2 += "Selected approximated\n"+StringUtilities::toDisplayString(p0[0])+'\t'+ StringUtilities::toDisplayString(p0[1])+'\t'+StringUtilities::toDisplayString(p0[2])+'\n'+StringUtilities::toDisplayString(p1[0])+'\t'+StringUtilities::toDisplayString(p1[1])+'\t'+StringUtilities::toDisplayString(p1[2])+'\n'+StringUtilities::toDisplayString(p2[0])+'\t'+StringUtilities::toDisplayString(p2[1])+'\t'+StringUtilities::toDisplayString(p2[2])+'\n'+'\n';// verifica
+		return true;
+}
+
 bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 {
 	  std::vector<double> distances; 
@@ -255,7 +444,7 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 		distances[i] = fabs (model_coefficients.dot (pt));
 		//sum_distances += distances[i];
 
-		acc->getPointId();
+		//acc->getPointId();
 		if (distances[i] < threshold)//I verified that with a treshold = 0.00000001 (approximation for 0), the method finds only 3 inliers: the 3 points with whom we build the plane
 		{
 		  // Returns the indices of the points whose distances are smaller than the threshold
@@ -272,6 +461,48 @@ bool Ransac::countWithinDistance(double threshold,PointCloudAccessor acc)
 	return true;
 }
 
+
+bool Ransac::countWithinDistance2(double threshold, Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+{
+	  std::vector<double> distances; 
+	  std::vector<double> error_sqr_dists_;
+
+	  inliers.resize (data.rows());
+	  distances.resize(data.rows());
+	  error_sqr_dists_.resize(data.rows());
+	
+      msg2 += "inliers \n";
+	
+	  // Iterate through the 3d points and calculate the distances from them to the plane
+	  //for (size_t i = 0; i < data.rows(); ++i
+      for (int i = 0; i < data.rows(); ++i)
+	  {
+		// Calculate the distance from the point to the plane normal as the dot product
+		// D = (P-A).N/|N|
+
+	   Eigen::Vector4d pt (data(i,0),//x
+						   data(i,1),//y
+						   data(i,2),//z
+							1);
+
+		distances[i] = fabs (model_coefficients.dot (pt));
+
+		if (distances[i] < threshold)//I verified that with a treshold = 0.00000001 (approximation for 0), the method finds only 3 inliers: the 3 points with whom we build the plane
+		{
+		  // Returns the indices of the points whose distances are smaller than the threshold
+		  inliers[nr_p] = i;
+		  error_sqr_dists_[nr_p] =  static_cast<double> (distances[i]);
+		  ++nr_p;
+		  msg2 += StringUtilities::toDisplayString(i)+' ';
+		}
+		//acc->nextValidPoint();
+	  }
+	  //acc->toIndex(0);
+	  msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found\n\n";
+	return true;
+}
+
+
 bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 {
 	acc->toIndex(0);
@@ -282,11 +513,10 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 	Eigen::Matrix<double, 1, 9, Eigen::RowMajor> sum = Eigen::Matrix<double, 1, 9, Eigen::RowMajor>::Zero (); // matrix used to compute covariance matrix see centroid.hpp (common)
 
 	 //I must use only the inliers; 
-	  for (size_t i=0; i<nr_p; i++)
+	 for (size_t i=0; i<nr_p; i++)
 	  {
-		  //acc->toIndex(inliers[i]);
 		  acc->toIndex(inliers[i]);
-		  sum [0] += acc->getXAsDouble(true) * acc->getXAsDouble(true);
+		  sum [0] += acc->getXAsDouble(true) * acc->getXAsDouble(true); 
 		  sum [1] += acc->getXAsDouble(true) * acc->getYAsDouble(true);
 		  sum [2] += acc->getXAsDouble(true) * acc->getZAsDouble(true);
 		  sum [3] += acc->getYAsDouble(true) * acc->getYAsDouble(true);
@@ -346,6 +576,77 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 
 	 return true;
 }
+
+bool Ransac::optimizeModelCoefficients2(Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+{
+  
+	// Eigen align dispone le matrici su un array e poi vi si accede come se fosse un array (serve forse per allineare la cache??????)
+	EIGEN_ALIGN16 Eigen::Matrix3d covariance_matrix;
+    Eigen::Vector4d xyz_centroid;// centroid: the mean vector  
+
+	Eigen::Matrix<double, 1, 9, Eigen::RowMajor> sum = Eigen::Matrix<double, 1, 9, Eigen::RowMajor>::Zero (); // matrix used to compute covariance matrix see centroid.hpp (common)
+
+    //These 4 lines are only to see if the method works: to test it with the same input of the method with the accessor
+	/* nr_p =3;
+	 inliers[0] = 0;
+	 inliers[1] = 1;
+	 inliers[2] = 2;*/
+
+	 //I must use only the inliers; 
+	  //for (size_t i=0; i<nr_p; i++)
+	for (int i=0; i<nr_p; i++)
+	{
+		  sum [0] += data(inliers[i], 0) * data(inliers[i], 0); //x * x
+		  sum [1] += data(inliers[i], 0) * data(inliers[i], 1); //x * y
+		  sum [2] += data(inliers[i], 0) * data(inliers[i], 2); //x * z
+		  sum [3] += data(inliers[i], 1) * data(inliers[i], 1); //y * y
+		  sum [4] += data(inliers[i], 1) * data(inliers[i], 2); //y * z
+		  sum [5] += data(inliers[i], 2) * data(inliers[i], 2); //z * z
+		  sum [6] += data(inliers[i], 0); //x
+		  sum [7] += data(inliers[i], 1); //y
+		  sum [8] += data(inliers[i], 2); //z
+    }
+  
+   sum  /= static_cast<double> (nr_p);
+
+   // see centroid.hpp (common)
+    xyz_centroid[0] = sum [6]; // mean of the X values 
+	xyz_centroid[1] = sum [7]; // mean of the Y values
+	xyz_centroid[2] = sum [8]; // mean of the Z values
+    xyz_centroid[3] = 0;       // unused
+    covariance_matrix.coeffRef (0) = sum  [0] - sum [6] * sum [6]; //   variance_X  = sum (X^2)/n - (mean(X))^2
+    covariance_matrix.coeffRef (1) = sum  [1] - sum [6] * sum [7]; // covariance_XY = sum (X*Y)/n - (mean(X) * mean(Y))
+    covariance_matrix.coeffRef (2) = sum  [2] - sum [6] * sum [8]; // covariance_XZ = sum (X*Z)/n - (mean(X) * mean(Z))
+    covariance_matrix.coeffRef (4) = sum  [3] - sum [7] * sum [7]; //   variance_Y  = sum (Y^2)/n - (mean(Y))^2
+    covariance_matrix.coeffRef (5) = sum  [4] - sum [7] * sum [8]; // covariance_YZ = sum (Y*Z)/n - (mean(Y) * mean(Z))
+    covariance_matrix.coeffRef (8) = sum  [5] - sum [8] * sum [8]; //   variance_Z  = sum (Z^2)/n - (mean(Z))^2
+    covariance_matrix.coeffRef (3) = covariance_matrix.coeff (1);  //  covariance_YX = sum (X*Y)/n - (mean(X) * mean(Y)) (the covariance matrix is symmetric)
+    covariance_matrix.coeffRef (6) = covariance_matrix.coeff (2);  // covariance_ZX = sum (X*Z)/n - (mean(X) * mean(Z))
+    covariance_matrix.coeffRef (7) = covariance_matrix.coeff (5);   
+
+	// Compute the model coefficients
+    EIGEN_ALIGN16 Eigen::Vector3d::Scalar eigen_value;
+    EIGEN_ALIGN16 Eigen::Vector3d eigen_vector;
+	eigen33 (covariance_matrix, eigen_value, eigen_vector); // attention to this problem http://www.pcl-users.org/different-eigen33-implementations-give-different-results-td4025849.html
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Hessian form (D = nc . p_plane (centroid here) + p)
+  // The eigenvector (we must use the smallest) values are a, b and c coefficients and then we use the mean of x, y and z to define a point on that plane in order to solve for d: http://xiang-jun.blogspot.it/2009/08/fit-least-squares-plane-to-set-of.html
+
+  optimized_coefficients.resize (4);
+  optimized_coefficients[0] = eigen_vector [0];
+  optimized_coefficients[1] = eigen_vector [1];
+  optimized_coefficients[2] = eigen_vector [2];
+  optimized_coefficients[3] = 0;
+  optimized_coefficients[3] = -1 * optimized_coefficients.dot (xyz_centroid);
+
+  msg2 += "Optimized plane parameters array\n"+StringUtilities::toDisplayString(optimized_coefficients[0])+'\n'+ StringUtilities::toDisplayString(optimized_coefficients[1])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[2])+'\n'+StringUtilities::toDisplayString(optimized_coefficients[3])+'\n';// verifica
+  //msg2 += "input coordinates for optimized method\n"+StringUtilities::toDisplayString(data(inliers[0], 0))+'\t'+ StringUtilities::toDisplayString(data(inliers[0], 1))+'\t'+StringUtilities::toDisplayString(data(inliers[0], 2))+'\n'+StringUtilities::toDisplayString(data(inliers[1], 0))+'\t'+StringUtilities::toDisplayString(data(inliers[1], 1))+'\t'+StringUtilities::toDisplayString(data(inliers[1], 2))+'\n'+StringUtilities::toDisplayString(data(inliers[2], 0))+'\t'+StringUtilities::toDisplayString(data(inliers[2], 1))+'\t'+StringUtilities::toDisplayString(data(inliers[2], 2))+'\n'+'\n';// verifica
+
+  return true;
+}
+
 
  /** determines the eigenvector and eigenvalue of the smallest eigenvalue of the symmetric positive semi definite input matrix
     * \param[in] mat symmetric positive semi definite input matrix
@@ -555,7 +856,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 
 	   // GENERATE THE DEM RASTER
 	   draw_raster_from_eigen_mat ("DEM", demRM, pElement);
-	    msg2 += "\nDEM raster:\nwidth "+ StringUtilities::toDisplayString(demRM.rows()) + "; height "+ StringUtilities::toDisplayString(demRM.cols())+"\n\n";
+	   msg2 += "\nDEM raster:\nwidth "+ StringUtilities::toDisplayString(demRM.rows()) + "; height "+ StringUtilities::toDisplayString(demRM.cols())+"\n\n";
 
 	  // eigen -> openCV: dem from eigen matrix to open cv matrix (CV_32FC1 means 32 bit floating point signed depth in one channel; CV_64FC1 doesn't work) 
 	  //cv::Mat CVdem(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());//Eigen::RowMajor); 
@@ -1620,6 +1921,12 @@ bool Ransac::connected_components(std::string image_name,  PointCloudElement* pE
 
    float dem_spacing = 5.0f;// this must be a function parameter
 
+   pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
+   double xMin = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
+   double xMax = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
+   double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
+   double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
+
 
     // Randomy color the blobs
     for(int i = 0; i < blobs.size(); i++)
@@ -1629,14 +1936,22 @@ bool Ransac::connected_components(std::string image_name,  PointCloudElement* pE
         unsigned char b = unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
 
 		// Here I need store coordinate 3x blobs[i].size()
+		Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_for_Ransac;// rows= number of pixels belonging to that building (e.g blobs[i].size()); columns: the 3 coordinates
+		building_for_Ransac.setConstant(blobs[i].size(), 3, 0.0);
+		//cv::Mat building_for_Ransac(blobs[i].size(), 3, CV_32FC1, demRM.data());
+		//  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> demRM;// dem stored in a Row major eigen matrix
+
         for(int j = 0; j < blobs[i].size(); j++) 
 		{// j index is the pixel index for the single building ()
             int pixel_column = blobs[i][j].x;
             int pixel_row = blobs[i][j].y;			
 
-			double x_building = pixel_column * dem_spacing; // object coordinate 
-			double y_building = pixel_row * dem_spacing; // object coordinate
+			double x_building =  pixel_column * dem_spacing; // xMin +object coordinate 
+			double y_building =  pixel_row * dem_spacing; // yMin + object coordinate
 			double z_building = original_tiles_merged.at<float>(pixel_row, pixel_column);//object coordinate
+			building_for_Ransac(j,0) = x_building;
+			building_for_Ransac(j,1) = y_building;
+			building_for_Ransac(j,2) = z_building;
 
 			classified_buildings.at<uchar>(pixel_row, pixel_column) = i;
 
@@ -1644,6 +1959,16 @@ bool Ransac::connected_components(std::string image_name,  PointCloudElement* pE
             output.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
             output.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
         }
+
+		nr_p = 0;
+		msg2 += "\n-------------Building number " + StringUtilities::toDisplayString(i) +"----------------\n";
+		if(Ransac::getSamples2 (3, blobs[i].size()) == true)
+		{
+			Ransac::computeModelCoefficients2(building_for_Ransac);
+			Ransac::countWithinDistance2( 0.00000001, building_for_Ransac);
+			Ransac::optimizeModelCoefficients2(building_for_Ransac);
+			//nr_p = 0;
+		}
     }
 
 	

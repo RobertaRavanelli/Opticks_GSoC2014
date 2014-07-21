@@ -119,6 +119,8 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    int n_rows = 8;// 4
    int n_cols = 10;// 5
 
+   //prova.generate_raster_from_intensity(pElement, post_spacing);
+
    if(prova.generate_DEM(pElement, post_spacing, n_rows,n_cols) == true)
    {
 	  progress.report("Segmenting buildings", 35, NORMAL);
@@ -128,12 +130,13 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	  //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
     
+   double RANSAC_threshold =  0.00000001; //0.00000001;0.02
    prova.connected_components("buildings_for_connected_components.png", pElement);
-   
-   //prova.generate_raster_from_intensity(pElement, post_spacing);
+   prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
+   prova.print_result();
 
-   progress.report("Computing RANSAC", 40, NORMAL);
-   prova.ComputeModel(pElement);
+   //progress.report("Computing RANSAC", 40, NORMAL);
+   //prova.ComputeModel(pElement, RANSAC_threshold);// treshold =0.02
 
    /*prova.computeModelCoefficients2(prova.prova33);
    prova.optimizeModelCoefficients2(prova.prova33);*/
@@ -152,7 +155,6 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 		 srand (time(NULL));
 	     matrix(i,1) = 5*i+21;// rand() % 33;
 	     matrix(i,2) = 10.0;
-
    }
 
    for (int i =1000; i< 1010; i++)
@@ -162,41 +164,9 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	     matrix(i,2) = rand() % 700;
    }
 
-   /* matrix(0,1) = 0.0;
-	matrix(0,1) = 0.0;
-	matrix(0,2) = 1.0;
 
-	matrix(1,0) = 7.0;
-	matrix(1,1) = 5.0;
-	matrix(1,2) = 14.0;
-
-	matrix(2,0) = 17.0;
-	matrix(2,1) = 3.0;
-	matrix(2,2) = 28.0;*/
-
-	/*matrix(3,0) = 3.0;
-	matrix(3,1) = 3.0;
-	matrix(3,2) = 7.0;
-
-	matrix(3,0) = 4.0;
-	matrix(3,1) = 4.0;
-	matrix(3,2) = 9.0;
-
-	matrix(3,0) = 5.0;
-	matrix(3,1) = 3.0;
-	matrix(3,2) = 10.0;*/
-
-   prova.nr_p = 0;
-   //prova.ComputeModel2(matrix);
+   prova.ComputeModel2(matrix, RANSAC_threshold);
    
-   if (prova.getSamples2 (3,matrix.rows())==true)
-   {
-   
-   prova.computeModelCoefficients2(matrix);
-   prova.countWithinDistance2(  0.00000001, matrix);
-   prova.optimizeModelCoefficients2(matrix);
-   }
-   prova.msg2 += "\n___________________________\n\n";
 
    progress.report("Printing messages, wait", 80, NORMAL);
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning

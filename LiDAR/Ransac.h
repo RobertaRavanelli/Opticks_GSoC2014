@@ -128,6 +128,7 @@ public:
 
 	std::vector<std::vector<int>> buildingS_inliers;// stores the inliers for all the buildings
 	std::vector<Eigen::VectorXd> buildingS_plane_coefficients;// stores the plane parameters for all the buildings
+	std::vector<int> buldingS_number_inliers; // every row stores the number of inliers for each building
 
 	Ransac(void);
 	~Ransac(void);

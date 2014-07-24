@@ -130,7 +130,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	  //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
     
-   double RANSAC_threshold =  0.00000001; //0.00000001;0.02
+   double RANSAC_threshold =  1; //0.00000001;0.02
    prova.connected_components("buildings_for_connected_components.png", pElement);
    prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
    prova.print_result();

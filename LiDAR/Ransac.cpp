@@ -172,7 +172,6 @@ bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
 			final_model_coefficients = optimized_coefficients;
     }
 	
-	
 	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_) + " on " + StringUtilities::toDisplayString(k) + " needed\n\n";
 	msg2 += StringUtilities::toDisplayString(n_best_inliers_count)+ " inliers found on " + StringUtilities::toDisplayString(data.rows()) + " total points (" + StringUtilities::toDisplayString(static_cast<double> (n_best_inliers_count) * one_over_indices * 100)+ "% of inliers)\n";
 	
@@ -1362,7 +1361,7 @@ bool Ransac::watershed_segmentation(std::string image_name, PointCloudElement* p
     cv::Mat markers(binary.size(),CV_8U,cv::Scalar(0));
     markers = fg + bg;
 
-    // Create watershed segmentation object
+    // Create watershed segmentation object 
     WatershedSegmenter segmenter;
     segmenter.setMarkers(markers);
 
@@ -1952,16 +1951,17 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	buildingS.resize(blobs.size());
 	buildingS_inliers.resize(blobs.size());
 	buildingS_plane_coefficients.resize(blobs.size());
+	buldingS_number_inliers.resize(blobs.size());
 
 	// Here I need to store coordinate blobs[i].size() x 3
 	//Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_for_Ransac;// rows= number of pixels belonging to that building (e.g blobs[i].size()); columns: the 3 coordinates
 	std::ofstream building_file;
-	//for(int i = 0; i < blobs.size(); i++)
-	for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
+	for(int i = 0; i < blobs.size(); i++)
+	//for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
 	{// i index is the building (blob) index
 		
 		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
-		building_file << 'x' << '\t' << 'y' << '\t' << 'z' << '\n'; 
+		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
 		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
 		
 		for(int j = 0; j < blobs[i].size(); j++) 
@@ -1976,8 +1976,8 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 			buildingS[i](j,0) = x_building;
 			buildingS[i](j,1) = y_building;
 			buildingS[i](j,2) = z_building;
-			
-			building_file << buildingS[i](j,0) << '\t' << buildingS[i](j,1) << '\t' << buildingS[i](j,2) << '\n'; 
+			 
+			building_file << pixel_row+1 <<  '\t' << pixel_column+1 <<  '\t' << buildingS[i](j,0) << '\t' << buildingS[i](j,1) << '\t' << buildingS[i](j,2) << '\n'; //+1 on the imae coordinates to verify with opticks' rasters (origin is 1,1)
 		}
 
 		building_file.close();
@@ -1985,6 +1985,7 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		msg2 += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
 		Ransac::ComputeModel2(buildingS[i], ransac_threshold);
 		msg2 += "\n______________________\n\n";
+		buldingS_number_inliers[i]= n_best_inliers_count;
 		buildingS_inliers[i] = final_inliers;
 		buildingS_plane_coefficients[i] = final_model_coefficients;
 	}
@@ -1996,23 +1997,32 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 bool Ransac::print_result()
 {
 	std::ofstream results_file;
-	results_file.open (std::string(path) + "risultati.txt");
-	//for(int i = 0; i < buildingS.size(); i++)
-    for(int i = 0; i < 10; i++)
+	std::ofstream inliers_file;
+	std::ofstream parameters_file;
+	results_file.open (std::string(path) + "Ransac_buildings_results.txt");
+	inliers_file.open (std::string(path) + "buildings_inliers.txt");
+	parameters_file.open (std::string(path) + "buildings_parameters.txt");
+	for(int i = 0; i < buildingS.size(); i++)
+    //for(int i = 0; i < 10; i++)
 	{// i index is the building (blob) index
 		// Printing the model coefficients
 		results_file << "\n______________Building " << StringUtilities::toDisplayString(i) << "__________\n";
 		results_file << "Coefficients" <<"\n";
 		results_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
+	    parameters_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
 	
-		results_file << "inliers\n";
-		for(int j = 0; j <  buildingS_inliers[i].size(); j++)
+
+		results_file << "inliers found\n";
+		for(int j = 0; j <  buldingS_number_inliers[i]; j++)
 		{ 
 	      results_file << buildingS_inliers[i][j] << '\t'; 
+		  inliers_file << buildingS_inliers[i][j] << '\t'; 
 	    }
-		//results_file << '\n';
+		inliers_file << '\n';
 	}
 	results_file.close();
+	inliers_file.close();
+	parameters_file.close();
 
 	return true;
 }

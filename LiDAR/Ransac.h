@@ -97,10 +97,13 @@ public:
 	Eigen::VectorXd  model_coefficients;
 	std::vector<int> random_selected_indices;
     const PointCloudDataDescriptor* pDesc;
-	std::vector<int> inliers; // it contains the inliers indexes (their ID) for the single iterations: maybe this must be private
+	std::vector<int> inliers; // it contains the inliers indexes (their ID) for the single iteration: maybe this must be private
+	std::vector<int> outliers; // it contains the outliers indexes (their ID) for the single iteration: maybe this must be private
 	int nr_p;//NUMBER OF THE INLIERS for the single iteration
+	int nr_o;//NUMBER OF THE outliers for the single iteration
 	Eigen::VectorXd optimized_coefficients;
-	std::vector<int> final_inliers;// the inliers found
+	std::vector<int> final_inliers;// the inliers found after ALL the iterations
+	std::vector<int> final_outliers;// the outiers found after ALL the iterations
 	Eigen::VectorXd final_model_coefficients; // the coefficients corrispondent to the max number of inliers
 	int n_best_inliers_count;
 
@@ -127,6 +130,7 @@ public:
 	std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> buildingS;
 
 	std::vector<std::vector<int>> buildingS_inliers;// stores the inliers for all the buildings
+	std::vector<std::vector<int>> buildingS_outliers;// stores the outliers for all the buildings
 	std::vector<Eigen::VectorXd> buildingS_plane_coefficients;// stores the plane parameters for all the buildings
 	std::vector<int> buldingS_number_inliers; // every row stores the number of inliers for each building
 
@@ -145,6 +149,11 @@ public:
 	bool Ransac::countWithinDistance2(double threshold,  Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::optimizeModelCoefficients2(Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold);
+
+	// ALL THE METHOD WITH THE 3 NUMBER are needed to recursive RANSAC application on the outliers
+	bool Ransac::computeModelCoefficients3 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+	bool Ransac::getSamples3 (int model_points,int size_array, std::vector<int> array_of_indices_to_process);
+	bool Ransac::countWithinDistance3(double threshold,  Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, std::vector<int> array_of_indices_to_process);
 
 	bool Ransac::generate_DEM (PointCloudElement* pElement, float post_spacing, int n_rows_tiles, int n_cols_tiles);
 	bool Ransac::generate_raster_from_intensity (PointCloudElement* pElement, float post_spacing);

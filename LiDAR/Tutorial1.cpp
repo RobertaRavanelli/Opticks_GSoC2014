@@ -131,25 +131,25 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    }
     
    double RANSAC_threshold =  1; //0.00000001;0.02
+   progress.report("Computing RANSAC", 40, NORMAL);
    prova.connected_components("buildings_for_connected_components.png", pElement);
    prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
-   prova.print_result();
+  
 
-   //progress.report("Computing RANSAC", 40, NORMAL);
+   
    //prova.ComputeModel(pElement, RANSAC_threshold);// treshold =0.02
 
-   /*prova.computeModelCoefficients2(prova.prova33);
-   prova.optimizeModelCoefficients2(prova.prova33);*/
+  
 
    // this part is used o test the ransac implementation:
    // it must return a=0, b=0, c=1 and d=-10: the plane Z=10
    prova.msg2 += "___________________________\n\n";
 
    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
-   matrix.setConstant(1010, 3, 0.0);
+   matrix.setConstant(10000, 3, 0.0);
 
 
-   for (int i =0; i< 1000; i++)
+   for (int i =0; i< 9000; i++)
    {
 	     matrix(i,0) = i*i;// % 100;
 		 srand (time(NULL));
@@ -157,7 +157,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	     matrix(i,2) = 10.0;
    }
 
-   for (int i =1000; i< 1010; i++)
+   for (int i =9000; i< 10000; i++)
    {
 	     matrix(i,0) = rand() % 10;
 	     matrix(i,1) = rand() % 200;
@@ -165,9 +165,12 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    }
 
 
-   prova.ComputeModel2(matrix, RANSAC_threshold);
-   
+   //prova.ComputeModel2(matrix, RANSAC_threshold);
+   prova.ComputeModel2(matrix, 1.0);
+   prova.getSamples3(3, matrix.rows() - prova.n_best_inliers_count, prova.final_outliers);
 
+   
+   prova.print_result();
    progress.report("Printing messages, wait", 80, NORMAL);
    progress.report(prova.msg2, 90, WARNING);// only to see the message, it isn't a real warning
    progress.report(prova.msg1, 100, NORMAL);

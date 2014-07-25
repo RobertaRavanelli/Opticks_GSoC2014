@@ -112,7 +112,7 @@ bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
 	double probability_= 0.99;        // probability that at least one of the random samples of s (for us 3) points is free from outliers
 	int max_iterations_ = 100000;//200000;     // safeguard against being stuck in this loop forever
 	nr_p = 0;
-
+	nr_o = 0;
 	int minimum_model_points = 3;
 
 	int iterations_ = 0;
@@ -145,6 +145,7 @@ bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
 				
 				final_model_coefficients = model_coefficients;
 				final_inliers = inliers;
+				final_outliers = outliers;
 				// Compute the k parameter (k=log(z)/log(1-w^n))
 				double w = static_cast<double> (n_best_inliers_count) * one_over_indices; // w is the probability that any selected data point is an inlier (e=1-w: probability that a point is an outlier)
 				double p_no_outliers = 1.0 - pow (w, static_cast<double> (minimum_model_points)); // w^3 probability of choosing 3 inliers in a row (sample only contains inliers)
@@ -153,6 +154,7 @@ bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
 				k = log_probability / log (p_no_outliers);
 			}
 			nr_p = 0;
+			nr_o = 0;
 			++iterations_;
 		}
 	}
@@ -161,30 +163,44 @@ bool Ransac::ComputeModel2(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
 	inliers = final_inliers;
 	
 	//// writing the results on a file
-	std::ofstream RANSAC_results_file;
-	RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
-    RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
+	//std::ofstream RANSAC_results_file;
+	//RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
+    //RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
 
 	msg2 += "------ RANSAC final results -------\n";
-	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+	msg2 += "Threshold used: "+ StringUtilities::toDisplayString(ransac_threshold)+ "\n";
+	msg2 += "\niterations " + StringUtilities::toDisplayString(iterations_) + " on " + StringUtilities::toDisplayString(k) + " needed\n\n";
+	msg2 += StringUtilities::toDisplayString(n_best_inliers_count)+ " inliers found on " + StringUtilities::toDisplayString(data.rows()) + " total points (" + StringUtilities::toDisplayString(static_cast<double> (n_best_inliers_count) * one_over_indices * 100)+ "% of inliers)\n";
+	
+
+	msg2 += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n';// verifica
 	if (optimizeModelCoefficients2(data) == true)
 	{
 			final_model_coefficients = optimized_coefficients;
     }
 	
-	msg2 += "iterations " + StringUtilities::toDisplayString(iterations_) + " on " + StringUtilities::toDisplayString(k) + " needed\n\n";
-	msg2 += StringUtilities::toDisplayString(n_best_inliers_count)+ " inliers found on " + StringUtilities::toDisplayString(data.rows()) + " total points (" + StringUtilities::toDisplayString(static_cast<double> (n_best_inliers_count) * one_over_indices * 100)+ "% of inliers)\n";
+	// Remember that if we want to denormalize the model coefficients we must multiply all the parameters for radq(a^2+b^2+c^2)
+	msg2 += "\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
+
 	
-	for(size_t i = 0; i < n_best_inliers_count; i++)
+	msg2 += "INLIERS ("+ StringUtilities::toDisplayString(n_best_inliers_count) + ")\n";
+	for(int i = 0; i < n_best_inliers_count; i++)
 	{
 		msg2 +=  StringUtilities::toDisplayString(final_inliers[i])+" ";
-	    RANSAC_results_file << final_inliers[i] << '\t'; 
+	    //RANSAC_results_file << final_inliers[i] << '\t'; 
 	}
 
-	// Remember that if we want to denormalize the model coefficients we must multiply all the parameters for radq(a^2+b^2+c^2)
-	msg2 += "\n\noptimized model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n'+'\n';// verifica
-	RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
-	RANSAC_results_file.close();
+	msg2 += "\nOUTLIERS ("+ StringUtilities::toDisplayString(data.rows() - n_best_inliers_count) + ")\n";
+	for(int i = 0; i < data.rows() - n_best_inliers_count; i++)
+	{
+		msg2 +=  StringUtilities::toDisplayString(final_outliers[i])+" ";
+	    //RANSAC_results_file << final_outliers[i] << '\t'; 
+	}
+
+	msg2 += "\n\n";
+	
+	//RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
+	//RANSAC_results_file.close();
 	
 	return true;
 }
@@ -287,7 +303,36 @@ bool Ransac::getSamples2 (int model_points,int size_array)
 	   return true;
 }
 
+bool Ransac::getSamples3 (int model_points,int size_array, std::vector<int> array_of_indices_to_process)
+{
+	   int while_counter = 0;
 
+	   random_selected_indices.resize(model_points);
+	   int point_index = -1;
+	   //http://www.boost.org/doc/libs/1_55_0/doc/html/boost_random/tutorial.html#boost_random.tutorial.generating_a_random_password.c5
+	   boost::random::random_device rng;
+	   boost::random::uniform_int_distribution<> index_dist(0, size_array - 1);
+  
+	   for (size_t i = 0; i < model_points; ++i)
+	   {
+		   int a = index_dist(rng);
+		   //a check not to select the same points
+		   while(point_index == a)
+		   {
+			   while_counter ++;
+			   if (while_counter > 10000)
+			   {
+			       msg2 += "Not able to find 3 different points \n\n";
+				   return false;
+			   }
+		   }
+		  point_index = a;
+		  random_selected_indices[i] =  array_of_indices_to_process[point_index]; // it shoul give us directly the right indices
+	   }
+	    
+	   msg2 += "Selected points \n"+StringUtilities::toDisplayString(random_selected_indices[0])+' '+ StringUtilities::toDisplayString(random_selected_indices[1])+' '+StringUtilities::toDisplayString(random_selected_indices[2])+'\n'+'\n';// verifica
+	   return true;
+}
 
 bool Ransac::computeModelCoefficients (PointCloudAccessor acc)
 {
@@ -416,6 +461,67 @@ bool Ransac::computeModelCoefficients2 ( Eigen::Matrix<double, Eigen::Dynamic, E
 		return true;
 }
 
+ bool Ransac::computeModelCoefficients3 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+{
+		/////////////////////      RETRIEVE DATA FROM POINTCLOUDS       ///////////////////
+		Eigen::Array4d p0, p1, p2;//store for the 3 random selected points
+
+		//acc->toIndex(random_selected_indices[0]);
+		p0[0] = data(random_selected_indices[0], 0); // x
+		p0[1] = data(random_selected_indices[0], 1); // y
+		p0[2] = data(random_selected_indices[0], 2); // z
+
+		//acc->toIndex(random_selected_indices[1]);
+		p1[0] = data(random_selected_indices[1], 0); // x
+		p1[1] = data(random_selected_indices[1], 1); // y
+		p1[2] = data(random_selected_indices[1], 2); // z
+
+		//acc->toIndex(random_selected_indices[2]);
+		p2[0] = data(random_selected_indices[2], 0); // x
+		p2[1] = data(random_selected_indices[2], 1); // y
+		p2[2] = data(random_selected_indices[2], 2); // z
+		
+		/////////////////// FIND PLANE COEFFICIENTS ///////////////////////////////////////
+  
+		/*http://www.cplusplus.com/forum/general/74720/
+		normal = cross_product(b-a, c-a) = cross_product(p1-p0, p2-p0)
+		distance = dot_product(normal, P): P is a point in the plane, like a, b or c */
+  
+		//  Compute the segment values (in 3d) between p1 and p0
+		Eigen::Array4d p1p0 = p1 - p0;
+
+		// Compute the segment values (in 3d) between p2 and p0
+		Eigen::Array4d p2p0 = p2 - p0;
+
+		// dy1dy2: useful to check for collinearity 
+		Eigen::Array4d dy1dy2 = (p1-p0) / (p2-p0);
+
+		if ( (dy1dy2[0] == dy1dy2[1]) && (dy1dy2[2] == dy1dy2[1])  )  // Check for collinearity
+		{ 
+			//msg2 += "The selected points are collinear: repeat the selection\n\n";
+			return false;
+		}
+  
+		// Compute the plane coefficients from the 3 given points in a straightforward manner
+		// calculate the plane normal n = (p2-p1) x (p3-p1) = cross (p2-p1, p3-p1)
+		model_coefficients.resize (4);
+		model_coefficients[0] = p1p0[1] * p2p0[2] - p1p0[2] * p2p0[1];
+		model_coefficients[1] = p1p0[2] * p2p0[0] - p1p0[0] * p2p0[2];
+		model_coefficients[2] = p1p0[0] * p2p0[1] - p1p0[1] * p2p0[0];
+		model_coefficients[3] = 0;
+
+		// Normalize
+		model_coefficients.normalize();
+
+		// ax + by + cz + d = 0
+		model_coefficients[3] = -1 * (model_coefficients.template head<4>().dot (p0.matrix ()));
+
+		//msg2 += "Approximated plane parameters array\n"+StringUtilities::toDisplayString(model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(model_coefficients[1])+'\n'+StringUtilities::toDisplayString(model_coefficients[2])+'\n'+StringUtilities::toDisplayString(model_coefficients[3])+'\n'+'\n';// verifica
+		//msg2 += "Coordinates of points in input to the approximated method\n"+StringUtilities::toDisplayString(p0[0])+'\t'+ StringUtilities::toDisplayString(p0[1])+'\t'+StringUtilities::toDisplayString(p0[2])+'\n'+StringUtilities::toDisplayString(p1[0])+'\t'+StringUtilities::toDisplayString(p1[1])+'\t'+StringUtilities::toDisplayString(p1[2])+'\n'+StringUtilities::toDisplayString(p2[0])+'\t'+StringUtilities::toDisplayString(p2[1])+'\t'+StringUtilities::toDisplayString(p2[2])+'\n'+'\n';// verifica
+		return true;
+}
+
+
 bool Ransac::countWithinDistance(double threshold, PointCloudAccessor acc)
 {
 	  std::vector<double> distances; 
@@ -463,6 +569,7 @@ bool Ransac::countWithinDistance2(double threshold, Eigen::Matrix<double,Eigen::
 	  std::vector<double> error_sqr_dists_;
 
 	  inliers.resize (data.rows());
+	  outliers.resize (data.rows());
 	  distances.resize(data.rows());
 	  error_sqr_dists_.resize(data.rows());
 	
@@ -489,6 +596,64 @@ bool Ransac::countWithinDistance2(double threshold, Eigen::Matrix<double,Eigen::
 		  error_sqr_dists_[nr_p] =  static_cast<double> (distances[i]);
 		  ++nr_p;
 		  // msg2 += StringUtilities::toDisplayString(i)+' ';
+		}
+		else
+		{
+			outliers[nr_o] = i;
+			++nr_o;
+		}
+		//acc->nextValidPoint();
+	  }
+	  //acc->toIndex(0);
+	  //msg2 += "\n"+StringUtilities::toDisplayString(nr_p)+" inliers found\n\n";
+	return true;
+}
+
+bool Ransac::countWithinDistance3(double threshold, Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, std::vector<int> array_of_indices_to_process)
+{
+	  // input are the coordinates of the outliers of the buildng, stored in the eigen mat
+	  std::vector<double> distances; 
+	  std::vector<double> error_sqr_dists_;
+
+	  inliers.resize (data.rows());
+	  outliers.resize (data.rows());
+	  distances.resize(data.rows());
+	  error_sqr_dists_.resize(data.rows());
+	
+      //msg2 += "inliers \n";
+	
+	  // Iterate through the 3d points and calculate the distances from them to the plane
+	  //for (size_t i = 0; i < data.rows(); ++i
+      for (int i = 0; i < data.rows(); ++i)
+	  {
+		// Calculate the distance from the point to the plane normal as the dot product
+		// D = (P-A).N/|N|
+
+	   //Eigen::Vector4d pt (data(array_of_indices_to_process[i],0),//x
+				//		   data(array_of_indices_to_process[i],1),//y
+				//		   data(array_of_indices_to_process[i],2),//z
+				//			1);
+
+	   
+	   Eigen::Vector4d pt (data(i,0),//x
+						   data(i,1),//y
+						   data(i,2),//z
+							1);
+
+		distances[i] = fabs (model_coefficients.dot (pt));
+
+		if (distances[i] < threshold)//I verified that with a treshold = 0.00000001 (approximation for 0), the method finds only 3 inliers: the 3 points with whom we build the plane
+		{
+		  // Returns the indices of the points whose distances are smaller than the threshold
+		  inliers[nr_p] = array_of_indices_to_process[i];
+		  error_sqr_dists_[nr_p] =  static_cast<double> (distances[i]);
+		  ++nr_p;
+		  // msg2 += StringUtilities::toDisplayString(i)+' ';
+		}
+		else
+		{
+			outliers[nr_o] = array_of_indices_to_process[i];
+			++nr_o;
 		}
 		//acc->nextValidPoint();
 	  }
@@ -1950,6 +2115,7 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	
 	buildingS.resize(blobs.size());
 	buildingS_inliers.resize(blobs.size());
+	buildingS_outliers.resize(blobs.size());
 	buildingS_plane_coefficients.resize(blobs.size());
 	buldingS_number_inliers.resize(blobs.size());
 
@@ -1966,7 +2132,8 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		
 		for(int j = 0; j < blobs[i].size(); j++) 
 		{// j index is the pixel index for the single building
-			int pixel_column = blobs[i][j].x;
+		 // loop on all the pixel of the SINGLE building
+		    int pixel_column = blobs[i][j].x;// c'era un int davanti
             int pixel_row = blobs[i][j].y;			
 
 			double x_building =  pixel_column * dem_spacing;// xMin + pixel_column * dem_spacing // object coordinate 
@@ -1982,12 +2149,72 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 
 		building_file.close();
 
+		
+		int cont = 0;
 		msg2 += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
+		msg2 += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
 		Ransac::ComputeModel2(buildingS[i], ransac_threshold);
-		msg2 += "\n______________________\n\n";
+		
 		buldingS_number_inliers[i]= n_best_inliers_count;
 		buildingS_inliers[i] = final_inliers;
+		buildingS_outliers[i] = final_outliers;
 		buildingS_plane_coefficients[i] = final_model_coefficients;
+		double inliers_percentage = static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
+		int inliers_so_far = n_best_inliers_count;
+		while (inliers_percentage < 0.5)
+		{
+			cont ++;
+			msg2 += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
+			Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_outliers;
+			building_outliers.setConstant(buildingS[i].rows() - inliers_so_far, 3, 0.0);
+			
+			std::vector<int> map_relative_outliers_to_original_building_index; 
+			map_relative_outliers_to_original_building_index.resize(building_outliers.rows());
+
+			std::vector<int> old_final_inliers = final_inliers; 
+			std::vector<int> old_final_outliers = final_outliers; 
+			
+
+			//* forse il metodo va già bene così, perchè riempio la matrice deglio outlier in maniera ordinata,
+			//* solo che gli indici degli inlier/outlier non sono più indicativi rispetto alla matrice di building originale, ma rispetto alla matrice di innput
+			for (int w = 0; w <building_outliers.rows(); w++)
+			{
+				building_outliers(w, 0) = buildingS[i](final_outliers[w], 0);
+			    building_outliers(w, 1) = buildingS[i](final_outliers[w], 1);
+			    building_outliers(w, 2) = buildingS[i](final_outliers[w], 2);
+				map_relative_outliers_to_original_building_index[w] = final_outliers[w];
+				
+				//msg2 += StringUtilities::toDisplayString(w)+" corrisponde a \t"+StringUtilities::toDisplayString(final_outliers[w])+"\n";
+				//msg2 += "\n" + StringUtilities::toDisplayString(pixel_row+1) + "\t" + StringUtilities::toDisplayString(pixel_column+1) + "\t" + StringUtilities::toDisplayString(final_outliers[w]) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 0))+ "\t"+ StringUtilities::toDisplayString(building_outliers(w, 1)) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 2))+"\n"; // needed for tesing (test passed at first iteration)
+			}
+			
+			msg2 += "\n";
+			//msg2 += "\nprova "+ StringUtilities::toDisplayString(inliers_percentage*100)+"\n";
+			Ransac::ComputeModel2(building_outliers, ransac_threshold);
+			inliers_percentage = inliers_percentage + static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (building_outliers.rows());
+
+			msg2 += "\nINLIERS IN RELATION GLOBAL INDEX ("+ StringUtilities::toDisplayString(n_best_inliers_count) + ")\n";
+	        for(size_t i = 0; i < n_best_inliers_count; i++)
+	        {
+		       //msg2 +=  StringUtilities::toDisplayString(old_final_inliers[final_inliers[i]])+" ";
+			   msg2 +=  StringUtilities::toDisplayString(final_inliers[old_final_inliers[i]])+" ";
+	           //RANSAC_results_file << final_inliers[i] << '\t'; 
+	        }
+			msg2 += "\n";
+
+			msg2 += "\nOUTLIERS IN RELATION GLOBAL INDEX("+ StringUtilities::toDisplayString(building_outliers.rows() - n_best_inliers_count) + ")\n";
+			for(size_t i = 0; i < building_outliers.rows() - n_best_inliers_count; i++)
+			{
+				//msg2 +=  StringUtilities::toDisplayString(old_final_outliers[final_outliers[i]])+" ";
+				msg2 +=  StringUtilities::toDisplayString(final_outliers[old_final_outliers[i]])+" ";
+				//RANSAC_results_file << final_outliers[i] << '\t'; 
+			}
+
+			msg2 += "\n"; 
+			inliers_so_far += n_best_inliers_count; // altrimente 
+		    
+		}// fine while
+		msg2 += "__________________________________________________________________\n";
 	}
 	building_file.close();
 	
@@ -2002,7 +2229,7 @@ bool Ransac::print_result()
 	results_file.open (std::string(path) + "Ransac_buildings_results.txt");
 	inliers_file.open (std::string(path) + "buildings_inliers.txt");
 	parameters_file.open (std::string(path) + "buildings_parameters.txt");
-	for(int i = 0; i < buildingS.size(); i++)
+	for(int i = 0; i < buildingS.size(); i++)// loop on every building
     //for(int i = 0; i < 10; i++)
 	{// i index is the building (blob) index
 		// Printing the model coefficients
@@ -2019,11 +2246,26 @@ bool Ransac::print_result()
 		  inliers_file << buildingS_inliers[i][j] << '\t'; 
 	    }
 		inliers_file << '\n';
+
+		/*results_file << "\noutliers found and their coordinates\n";
+		Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_outliers;
+		building_outliers.setConstant(buildingS[i].rows() - buldingS_number_inliers[i], 3, 0.0);
+		for (int w = 0; w <building_outliers.rows(); w++)
+		{
+				building_outliers(w, 0) = buildingS[i](buildingS_outliers[i][w], 0);
+			    building_outliers(w, 1) = buildingS[i](buildingS_outliers[i][w], 1);
+			    building_outliers(w, 2) = buildingS[i](buildingS_outliers[i][w], 2);
+				results_file << buildingS_outliers[i][w] << '\t'<< building_outliers(w, 0) << '\t'<< building_outliers(w, 1) << '\t'<< building_outliers(w, 2) << '\n';
+		}*/
+
 	}
 	results_file.close();
 	inliers_file.close();
 	parameters_file.close();
 
+	results_file.open (std::string(path) + "Ransac_log.txt");
+	results_file << msg2;
+	results_file.close();
 	return true;
 }
 

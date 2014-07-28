@@ -2149,7 +2149,8 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 
 		building_file.close();
 
-		
+		std::ofstream boh_file;
+		boh_file.open (std::string(path) + "Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
 		int cont = 0;
 		msg2 += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
 		msg2 += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
@@ -2161,60 +2162,60 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		buildingS_plane_coefficients[i] = final_model_coefficients;
 		double inliers_percentage = static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
 		int inliers_so_far = n_best_inliers_count;
-		while (inliers_percentage < 0.5)
+		std::vector<int> old_final_outliers = final_outliers;
+
+		while (inliers_percentage < 0.90)
 		{
 			cont ++;
 			msg2 += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
 			Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_outliers;
 			building_outliers.setConstant(buildingS[i].rows() - inliers_so_far, 3, 0.0);
 			
-			std::vector<int> map_relative_outliers_to_original_building_index; 
-			map_relative_outliers_to_original_building_index.resize(building_outliers.rows());
-
-			std::vector<int> old_final_inliers = final_inliers; 
-			std::vector<int> old_final_outliers = final_outliers; 
-			
-
-			//* forse il metodo va già bene così, perchè riempio la matrice deglio outlier in maniera ordinata,
+		   	//* forse il metodo va già bene così, perchè riempio la matrice deglio outlier in maniera ordinata,
 			//* solo che gli indici degli inlier/outlier non sono più indicativi rispetto alla matrice di building originale, ma rispetto alla matrice di innput
+			//* devo riporatre gli ID degli indici alla loro posizione origiale
 			for (int w = 0; w <building_outliers.rows(); w++)
 			{
-				building_outliers(w, 0) = buildingS[i](final_outliers[w], 0);
-			    building_outliers(w, 1) = buildingS[i](final_outliers[w], 1);
-			    building_outliers(w, 2) = buildingS[i](final_outliers[w], 2);
-				map_relative_outliers_to_original_building_index[w] = final_outliers[w];
+				building_outliers(w, 0) = buildingS[i](old_final_outliers[w], 0);
+			    building_outliers(w, 1) = buildingS[i](old_final_outliers[w], 1);
+			    building_outliers(w, 2) = buildingS[i](old_final_outliers[w], 2);
 				
-				//msg2 += StringUtilities::toDisplayString(w)+" corrisponde a \t"+StringUtilities::toDisplayString(final_outliers[w])+"\n";
 				//msg2 += "\n" + StringUtilities::toDisplayString(pixel_row+1) + "\t" + StringUtilities::toDisplayString(pixel_column+1) + "\t" + StringUtilities::toDisplayString(final_outliers[w]) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 0))+ "\t"+ StringUtilities::toDisplayString(building_outliers(w, 1)) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 2))+"\n"; // needed for tesing (test passed at first iteration)
 			}
 			
+
 			msg2 += "\n";
 			//msg2 += "\nprova "+ StringUtilities::toDisplayString(inliers_percentage*100)+"\n";
 			Ransac::ComputeModel2(building_outliers, ransac_threshold);
-			inliers_percentage = inliers_percentage + static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (building_outliers.rows());
+			//inliers_percentage = inliers_percentage + static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (building_outliers.rows());
+			inliers_percentage = inliers_percentage + static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
 
-			msg2 += "\nINLIERS IN RELATION GLOBAL INDEX ("+ StringUtilities::toDisplayString(n_best_inliers_count) + ")\n";
+			msg2 += "\nINLIERS IN RELATION TO GLOBAL INDEX ("+ StringUtilities::toDisplayString(n_best_inliers_count) + ")\n";
 	        for(size_t i = 0; i < n_best_inliers_count; i++)
 	        {
-		       //msg2 +=  StringUtilities::toDisplayString(old_final_inliers[final_inliers[i]])+" ";
-			   msg2 +=  StringUtilities::toDisplayString(final_inliers[old_final_inliers[i]])+" ";
-	           //RANSAC_results_file << final_inliers[i] << '\t'; 
+		       msg2 +=  StringUtilities::toDisplayString(old_final_outliers[final_inliers[i]])+" ";
+			   boh_file << old_final_outliers[final_inliers[i]] << "\t";
 	        }
 			msg2 += "\n";
+			boh_file << "\n";
 
-			msg2 += "\nOUTLIERS IN RELATION GLOBAL INDEX("+ StringUtilities::toDisplayString(building_outliers.rows() - n_best_inliers_count) + ")\n";
+			//old_final_outliers.resize(building_outliers.rows() - n_best_inliers_count);
+			msg2 += "\nOUTLIERS IN RELATION TO GLOBAL INDEX("+ StringUtilities::toDisplayString(building_outliers.rows() - n_best_inliers_count) + ")\n";
 			for(size_t i = 0; i < building_outliers.rows() - n_best_inliers_count; i++)
 			{
-				//msg2 +=  StringUtilities::toDisplayString(old_final_outliers[final_outliers[i]])+" ";
-				msg2 +=  StringUtilities::toDisplayString(final_outliers[old_final_outliers[i]])+" ";
-				//RANSAC_results_file << final_outliers[i] << '\t'; 
+				msg2 +=  StringUtilities::toDisplayString(old_final_outliers[final_outliers[i]])+" ";
+				old_final_outliers[i] = old_final_outliers[final_outliers[i]];// in this way I refer the outliers indexes to the global indexes (those referred to the original eigen matrix)
 			}
+			
+			
 
 			msg2 += "\n"; 
 			inliers_so_far += n_best_inliers_count; // altrimente 
+			
 		    
 		}// fine while
 		msg2 += "__________________________________________________________________\n";
+		//boh_file.close();
 	}
 	building_file.close();
 	
@@ -2257,7 +2258,7 @@ bool Ransac::print_result()
 			    building_outliers(w, 2) = buildingS[i](buildingS_outliers[i][w], 2);
 				results_file << buildingS_outliers[i][w] << '\t'<< building_outliers(w, 0) << '\t'<< building_outliers(w, 1) << '\t'<< building_outliers(w, 2) << '\n';
 		}*/
-
+		 
 	}
 	results_file.close();
 	inliers_file.close();

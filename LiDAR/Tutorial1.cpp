@@ -125,15 +125,15 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    {
 	  progress.report("Segmenting buildings", 35, NORMAL);
 	  //prova.watershed_segmentation("test_tile_float_opticks.png", pElement);
-	  prova.process_all_point_cloud_with_watershed(n_rows, n_cols, pElement); // n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
+	  prova.process_all_point_cloud_with_watershed(n_rows, n_cols, pElement); //for example n_rows = 4 and n_cols = 5 : in this case the raster will be cut in 4 tiles horizontally and 5 vertically
 	  //prova.pca_segmentation("prova0_4.png", pElement);
 	  //prova.process_all_point_cloud_with_pca(n_rows, n_cols, pElement);
    }
     
-   double RANSAC_threshold =  1; //0.00000001;0.02
+   double RANSAC_threshold =  1.0; //0.00000001;0.02
    progress.report("Computing RANSAC", 40, NORMAL);
    prova.connected_components("buildings_for_connected_components.png", pElement);
-   prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
+   prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold, progress);
   
 
    
@@ -166,7 +166,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 
 
    //prova.ComputeModel2(matrix, RANSAC_threshold);
-   prova.ComputeModel2(matrix, 1.0);
+   prova.ComputeModel2(matrix, RANSAC_threshold);
    prova.getSamples3(3, matrix.rows() - prova.n_best_inliers_count, prova.final_outliers);
 
    

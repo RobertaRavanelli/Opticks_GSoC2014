@@ -521,7 +521,6 @@ bool Ransac::computeModelCoefficients2 ( Eigen::Matrix<double, Eigen::Dynamic, E
 		return true;
 }
 
-
 bool Ransac::countWithinDistance(double threshold, PointCloudAccessor acc)
 {
 	  std::vector<double> distances; 
@@ -2103,15 +2102,14 @@ bool Ransac::connected_components(std::string image_name,  PointCloudElement* pE
 	return true;
 }
 
-bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold)
+bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold, ProgressTracker progress)
 {
-   
+    cv::Mat roof_image = cv::Mat::zeros(original_tiles_merged.size(), CV_8UC3);;
 	pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
     double xMin = pDesc->getXMin() * pDesc->getXScale() + pDesc->getXOffset();
     //double xMax = pDesc->getXMax() * pDesc->getXScale() + pDesc->getXOffset();
     double yMin = pDesc->getYMin() * pDesc->getYScale() + pDesc->getYOffset();
     //double yMax = pDesc->getYMax() * pDesc->getYScale() + pDesc->getYOffset();
-	
 	
 	buildingS.resize(blobs.size());
 	buildingS_inliers.resize(blobs.size());
@@ -2119,13 +2117,14 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	buildingS_plane_coefficients.resize(blobs.size());
 	buldingS_number_inliers.resize(blobs.size());
 
-	// Here I need to store coordinate blobs[i].size() x 3
-	//Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_for_Ransac;// rows= number of pixels belonging to that building (e.g blobs[i].size()); columns: the 3 coordinates
+	
 	std::ofstream building_file;
+	std::ofstream cont_file;
+	cont_file.open (std::string(path) + "Number_of_RANSAC_applications.txt"); 
 	for(int i = 0; i < blobs.size(); i++)
 	//for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
 	{// i index is the building (blob) index
-		
+		progress.report("Computing buildings", 50+i/blobs.size(), NORMAL);
 		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
 		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
 		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
@@ -2133,7 +2132,7 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		for(int j = 0; j < blobs[i].size(); j++) 
 		{// j index is the pixel index for the single building
 		 // loop on all the pixel of the SINGLE building
-		    int pixel_column = blobs[i][j].x;// c'era un int davanti
+		    int pixel_column = blobs[i][j].x;
             int pixel_row = blobs[i][j].y;			
 
 			double x_building =  pixel_column * dem_spacing;// xMin + pixel_column * dem_spacing // object coordinate 
@@ -2149,8 +2148,10 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 
 		building_file.close();
 
-		std::ofstream boh_file;
-		boh_file.open (std::string(path) + "Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
+		std::ofstream inliers_file;
+		std::ofstream parameters_file;
+		inliers_file.open (std::string(path) + "Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
+		parameters_file.open (std::string(path) + "plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");;
 		int cont = 0;
 		msg2 += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
 		msg2 += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
@@ -2163,6 +2164,22 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		double inliers_percentage = static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
 		int inliers_so_far = n_best_inliers_count;
 		std::vector<int> old_final_outliers = final_outliers;
+		 
+
+		// DRAWS THE ROOFS yellow
+		for (int k = 0; k < n_best_inliers_count; k++)
+		{
+			int pixel_row = static_cast<int>(buildingS[i](final_inliers[k], 1) /  dem_spacing);
+            int pixel_column = static_cast<int>(buildingS[i](final_inliers[k], 0) /  dem_spacing);
+
+			unsigned char r = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+            unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+            unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+			roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+            roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+            roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+		}
 
 		while (inliers_percentage < 0.90)
 		{
@@ -2194,10 +2211,10 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	        for(size_t i = 0; i < n_best_inliers_count; i++)
 	        {
 		       msg2 +=  StringUtilities::toDisplayString(old_final_outliers[final_inliers[i]])+" ";
-			   boh_file << old_final_outliers[final_inliers[i]] << "\t";
+			   inliers_file << old_final_outliers[final_inliers[i]] << "\t";
 	        }
 			msg2 += "\n";
-			boh_file << "\n";
+			inliers_file << "\n";
 
 			//old_final_outliers.resize(building_outliers.rows() - n_best_inliers_count);
 			msg2 += "\nOUTLIERS IN RELATION TO GLOBAL INDEX("+ StringUtilities::toDisplayString(building_outliers.rows() - n_best_inliers_count) + ")\n";
@@ -2207,7 +2224,80 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 				old_final_outliers[i] = old_final_outliers[final_outliers[i]];// in this way I refer the outliers indexes to the global indexes (those referred to the original eigen matrix)
 			}
 			
-			
+			parameters_file << final_model_coefficients[0] << "\t" << final_model_coefficients[1] << "\t" << final_model_coefficients[2] << "\t" << final_model_coefficients[3] << "\n";
+
+			if (cont == 1)
+			{
+				// DRAWS THE ROOFS blue
+			   for (int k = 0; k <n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 255;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			if (cont ==2)
+			{
+				// DRAWS THE ROOFS green
+			   for (int k = 0; k <n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			if (cont ==3)
+			{
+				// DRAWS THE ROOFS brown
+			   for (int k = 0; k <n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 128;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			//if (cont == 4)
+			//{
+			//	// DRAWS THE ROOFS white
+			//   for (int k = 0; k <n_best_inliers_count; k++)
+			//   {
+			//		int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 1) /  dem_spacing);
+			//		int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[final_inliers[k]], 0) /  dem_spacing);
+
+			//		unsigned char r = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+			//		unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+			//		unsigned char b = 255;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+			//	}
+			//}
+
 
 			msg2 += "\n"; 
 			inliers_so_far += n_best_inliers_count; // altrimente 
@@ -2216,9 +2306,14 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 		}// fine while
 		msg2 += "__________________________________________________________________\n";
 		//boh_file.close();
+
+		cont_file << i << "\t" << cont << "\n";
 	}
 	building_file.close();
-	
+	cont_file.close();
+	cv::imshow("roofs", roof_image);
+	cv::imwrite(path + "Tiles/building_roofs.png", roof_image);
+	cv::waitKey(0);
 	return true;
 }
 
@@ -2238,7 +2333,6 @@ bool Ransac::print_result()
 		results_file << "Coefficients" <<"\n";
 		results_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
 	    parameters_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
-	
 
 		results_file << "inliers found\n";
 		for(int j = 0; j <  buldingS_number_inliers[i]; j++)

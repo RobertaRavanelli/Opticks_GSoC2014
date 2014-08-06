@@ -156,20 +156,36 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\opticks-sdk20140410\Build\Moc\LiDAR_roof_extraction\moc_Gui.cpp" />
+    <ClCompile Include="$(OPTICKS_CODE_DIR)\Build\Moc\LiDAR_roof_extraction\moc_Gui.cpp" />
+    <ClCompile Include="$(OPTICKS_CODE_DIR)\Build\Moc\LiDAR_roof_extraction\moc_Tutorial1.cpp" />
+    <ClCompile Include="$(OPTICKS_CODE_DIR)\Build\Moc\LiDAR_roof_extraction\moc_LiDAR_roof_segmentation.cpp" />
     <ClCompile Include="Gui.cpp" />
+    <ClCompile Include="Interpolation.cpp" />
+    <ClCompile Include="LiDAR_roof_segmentation.cpp" />
     <ClCompile Include="ModuleManager.cpp" />
     <ClCompile Include="Ransac.cpp" />
+    <ClCompile Include="Segmentation.cpp" />
     <ClCompile Include="Tutorial1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="LiDAR_roof_segmentation.h">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTBIN)\moc.exe" "%(FullPath)" -o "$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Filename).h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
+    <ClInclude Include="Segmentation.h" />
     <CustomBuild Include="Gui.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTBIN)\moc.exe" "%(FullPath)" -o "$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Filename).h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp;%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="Interpolation.h" />
     <ClInclude Include="Ransac.h" />
-    <ClInclude Include="Tutorial1.h" />
+    <CustomBuild Include="Tutorial1.h">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTBIN)\moc.exe" "%(FullPath)" -o "$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Filename).h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(OPTICKS_CODE_DIR)\application\PlugInLib\PlugInLib.vcxproj">

@@ -1003,7 +1003,7 @@ bool Ransac::generate_DEM(PointCloudElement* pElement, float post_spacing, int n
 		  }
 
 		  //dem_file << xIndex << '\t' << yIndex<< '\t' << dem(yIndex, xIndex) << '\n';  
-		  dem_file << xIndex << '\t' << yIndex<< '\t' << demRM(yIndex, xIndex) << '\n';  
+		  dem_file << yIndex << '\t' << xIndex<< '\t' << demRM(yIndex, xIndex) << '\n';  
 		  acc->nextValidPoint();
 	   }
 
@@ -2102,7 +2102,8 @@ bool Ransac::connected_components(std::string image_name,  PointCloudElement* pE
 	return true;
 }
 
-bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold, ProgressTracker progress)
+bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold)
+//bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold, ProgressTracker progress)
 {
     cv::Mat roof_image = cv::Mat::zeros(original_tiles_merged.size(), CV_8UC3);;
 	pDesc = static_cast<const PointCloudDataDescriptor*>(pElement->getDataDescriptor());
@@ -2124,7 +2125,7 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	for(int i = 0; i < blobs.size(); i++)
 	//for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
 	{// i index is the building (blob) index
-		progress.report("Computing buildings", 50+i/blobs.size(), NORMAL);
+		//progress.report("Computing RANSAC on all buildings", static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
 		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
 		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
 		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
@@ -2314,6 +2315,7 @@ bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement
 	cv::imshow("roofs", roof_image);
 	cv::imwrite(path + "Tiles/building_roofs.png", roof_image);
 	cv::waitKey(0);
+	//progress.report("Computing RANSAC on all buildings", 100, NORMAL);
 	return true;
 }
 

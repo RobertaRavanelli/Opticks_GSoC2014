@@ -19,7 +19,11 @@
 #include "DataRequest.h"
 #include "DesktopServices.h"
 #include "ObjectFactory.h"
+//#include <ModelServices.h>
+//#include "Window.h"
+#include "MessageLogResource.h"
 
+ 
 #include "PointCloudAccessor.h"
 #include "PointCloudAccessorImpl.h"
 #include "PointCloudDataDescriptor.h"
@@ -27,11 +31,11 @@
 #include "PointCloudElement.h"
 #include "PointCloudView.h"
 #include "ProgressTracker.h"
-#include "PseudocolorLayer.h"
+//#include "PseudocolorLayer.h"
 //#include "RasterElement.h"
 //#include "RasterUtilities.h"
-#include "SpatialDataView.h"
-#include "SpatialDataWindow.h"
+//#include "SpatialDataView.h" 
+//#include "SpatialDataWindow.h"
 #include "Statistics.h"
 #include "switchOnEncoding.h"
 #include "Undo.h"
@@ -39,10 +43,15 @@
 #include "StringUtilities.h"
 #include "Ransac.h"
 #include <time.h>
+#include <QtGui/QApplication>
+#include <QtGui/QMessageBox>
+#include "SessionItemSerializer.h"
+#include "Interpolation.h"
 
 REGISTER_PLUGIN_BASIC(LidarRoof, Tutorial1);
 
-Tutorial1::Tutorial1()
+Tutorial1::Tutorial1():
+   mpGui(NULL)
 {
    setDescriptorId("{732D7E3E-1CE0-4D3B-B3A9-7F7B5F6B11B0}");
    setName("LIDAR Roof Extraction");
@@ -58,6 +67,10 @@ Tutorial1::Tutorial1()
 
 Tutorial1::~Tutorial1()
 {
+	 /*Service<DesktopServices> pDesktop;
+     pDesktop->detach(SIGNAL_NAME(DesktopServices, AboutToShowPropertiesDialog),
+     Slot(this, &Gui::updatePropertiesDialog));
+     pDesktop->deleteWindow(mpDockWindow);*/
 }
 
 
@@ -72,22 +85,24 @@ bool Tutorial1::getInputSpecification(PlugInArgList*& pInArgList)
 
 bool Tutorial1::getOutputSpecification(PlugInArgList*& pOutArgList)
 {
-   VERIFY((pOutArgList = Service<PlugInManagerServices>()->getPlugInArgList()) != NULL);
+  /* VERIFY((pOutArgList = Service<PlugInManagerServices>()->getPlugInArgList()) != NULL);
    pOutArgList->addArg<double>("Minimum", "The minimum value");
    pOutArgList->addArg<double>("Maximum", "The maximum value");
-   pOutArgList->addArg<unsigned int>("Count", "The number of points in the point cloud");
+   pOutArgList->addArg<unsigned int>("Count", "The number of points in the point cloud");*/
+   pOutArgList = NULL;
    return true;
 }
 
 bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 {
+
    if (pInArgList == NULL)
    {
       return false;
    }
     
   ProgressTracker progress(pInArgList->getPlugInArgValue<Progress>(Executable::ProgressArg()),
-      "Identifying buildings\n", "prova Roby", getDescriptorId());
+      "Identifying buildings\n", "app", getDescriptorId());
 
   PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
 
@@ -98,15 +113,17 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
       return false;
    }
   
+   //showGui(pElement);
+
   progress.report("Calculating", 0, NORMAL);
 
-   double minX, maxX;
+  /* double minX, maxX;
    int  count;
-
    pOutArgList->setPlugInArgValue("Minimum", &minX);
    pOutArgList->setPlugInArgValue("Maximum", &maxX);
-   pOutArgList->setPlugInArgValue("Count", &count);
+   pOutArgList->setPlugInArgValue("Count", &count);*/
    
+   Interpolation interp = Interpolation();
    Ransac prova = Ransac();
    
    //progress.report("Calculating point cloud statistics", 10, NORMAL);
@@ -118,6 +135,16 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    static const float post_spacing = 5.0f;//5.0f
    int n_rows = 8;// 4
    int n_cols = 10;// 5
+
+   
+   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
+   dem = interp.generate_DEM( pElement, post_spacing) ;
+
+   if (dem.size() != -1) // check if DEM  matrix is null
+   {
+	   prova.draw_raster_from_eigen_mat ("trial_int_class", dem,  pElement);
+	   //interp.print_DEM_on_file( std::string(prova.path)+ "prva.txt", dem);
+   }
 
    //prova.generate_raster_from_intensity(pElement, post_spacing);
 
@@ -133,8 +160,8 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    double RANSAC_threshold =  1.0; //0.00000001;0.02
    progress.report("Computing RANSAC", 40, NORMAL);
    prova.connected_components("buildings_for_connected_components.png", pElement);
-   prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold, progress);
-  
+   //prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold, progress);
+   //prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
 
    
    //prova.ComputeModel(pElement, RANSAC_threshold);// treshold =0.02
@@ -164,8 +191,6 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 	     matrix(i,2) = rand() % 700;
    }
 
-
-   //prova.ComputeModel2(matrix, RANSAC_threshold);
    prova.ComputeModel2(matrix, RANSAC_threshold);
    prova.getSamples3(3, matrix.rows() - prova.n_best_inliers_count, prova.final_outliers);
 
@@ -177,3 +202,52 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    progress.upALevel();
    return true;
 }
+
+bool Tutorial1::showGui(PointCloudElement* pElement)
+{
+	if (mpGui == NULL)
+    {
+		Service<DesktopServices> pDesktop;
+
+		mpGui = new Gui( pDesktop->getMainWidget(),"test", false);
+		VERIFYNR(connect(mpGui, SIGNAL(finished(int)), this, SLOT(dialogClosed())));
+	}
+
+	mpGui->show();
+	return true;
+}
+
+
+//bool Tutorial1::showGui()// when I close the opticks dialog, this method makes the plugin crash (problem with Qtcore)
+//{
+//	if (mpGui == NULL)
+//    {
+//		Service<DesktopServices> pDesktop;
+//
+//		mpGui = new Gui( pDesktop->getMainWidget(),"test", false);
+//		VERIFYNR(connect(mpGui, SIGNAL(finished(int)), this, SLOT(dialogClosed())));
+//	}
+//
+//	mpGui->show();
+//	return true;
+//}
+
+void Tutorial1::dialogClosed()
+{
+   abort();
+}
+
+  QWidget* Tutorial1::getWidget() const
+{
+   return mpGui;
+}
+
+//bool Tutorial1::serialize(SessionItemSerializer &serializer) const
+//{
+//   return serializer.serialize(NULL, 0); // force recreation on session load
+//}
+//
+//bool Tutorial1::deserialize(SessionItemDeserializer &deserializer)
+//{
+//   return showGui();
+//}

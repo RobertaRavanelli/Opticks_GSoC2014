@@ -10,17 +10,54 @@
 #ifndef GUI_H
 #define GUI_H
 
+#include "ViewerShell.h"
 #include <QtGui/QWidget>
 #include "AttachmentPtr.h"
+#include <QtGui/QAction>
+#include <QtGui/QDialog>
+#include <QtGui/QGroupBox>
+#include <QtGui/QRadioButton>
+#include <QtGui/QComboBox>
+#include <QtGui/QDoubleSpinBox>
 
-class Gui: public QWidget
+#include "PointCloudAccessor.h"
+#include "PointCloudAccessorImpl.h"
+#include "PointCloudDataDescriptor.h"
+#include "PointCloudDataRequest.h"
+#include "PointCloudElement.h"
+#include "PointCloudView.h"
+
+#include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
+#include <Eigen/Eigenvalues>
+#include "StringUtilities.h"
+
+class Gui: public QDialog//,public ViewerShell 
 {
 	Q_OBJECT
 
 public:
-	Gui(QWidget* pParent = NULL);
-
-	Gui();
+	
+	Gui(QWidget* pParent = 0, const char* pName = 0, bool modal = FALSE);
 	virtual ~Gui();
+	std::vector<std::string> mPointCloudNames;
+
+public slots:
+
+	void RunApplication();
+
+private:
+
+    Gui(const Gui& rhs);
+    Gui& operator=(const Gui& rhs);
+    QPushButton* mpRunButton;
+    QComboBox* mpLASListCombo;
+	QDoubleSpinBox* mpDEMspacing;
+	//GRID GuiGrid;
+	Service<ModelServices> pModel;
+    PointCloudElement* pElement;
+	void init();
+	bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
+	std::string warning_msg;
+	int button_cont;
 };
 #endif

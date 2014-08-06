@@ -110,7 +110,7 @@ public:
 
 	//* VARIABLES NEEDED FOR SEGMENTATION
 	int k_for_process_all_point_cloud;
-    std::vector<cv::Mat> tiles_array; // stores the tiles in which the original raster is divided (maybe this mustn'be a global variable)
+    std::vector<cv::Mat> tiles_array; // stores the tiles in which the original raster is divided 
 	std::vector<cv::Mat> result_tiles_array; // stores the result of the segmentation algorithm
 	
 	//* ORIGINAL_TILES_MERGED is the real raster input for all the processing methods of the Plug-In,
@@ -148,8 +148,8 @@ public:
 	bool Ransac::computeModelCoefficients2 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::countWithinDistance2(double threshold,  Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::optimizeModelCoefficients2(Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
-	bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold, ProgressTracker progress);
-
+	//bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold, ProgressTracker progress);
+	bool Ransac::Ransac_for_buildings(float dem_spacing, PointCloudElement* pElement, double ransac_threshold);
 	// ALL THE METHOD WITH THE 3 NUMBER are needed to recursive RANSAC application on the outliers
 	bool Ransac::computeModelCoefficients3 ( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::getSamples3 (int model_points,int size_array, std::vector<int> array_of_indices_to_process);

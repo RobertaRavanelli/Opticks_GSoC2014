@@ -50,6 +50,7 @@
 #include <QtGui/QMessageBox>
 #include "SessionItemSerializer.h"
 #include "Interpolation.h"
+#include "Segmentation.h"
 
 REGISTER_PLUGIN_BASIC(LidarRoof, LiDAR_roof_segmentation);
 

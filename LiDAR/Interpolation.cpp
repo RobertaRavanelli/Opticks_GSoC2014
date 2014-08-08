@@ -99,9 +99,7 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Interpolat
 	   }
 	   pProgress->updateProgress("DEM generation is complete.", 100, NORMAL);
 	   pStep->finalize();
-
-	//cv::Mat CVdemRM(static_cast<int>(demRM.rows()), static_cast<int>(demRM.cols()), CV_32FC1, demRM.data());
-	return demRM;
+	   return demRM;
 }
 
 bool Interpolation::print_DEM_on_file(std::string name_file, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> demRM)

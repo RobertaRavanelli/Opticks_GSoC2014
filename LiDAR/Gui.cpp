@@ -17,9 +17,15 @@
 #include <QtGui/QPushButton>
 #include <Qt/qevent.h>
 #include <QtGui/QMessageBox>
-#include "Interpolation.h"
 #include "Progress.h"
 #include "ProgressResource.h"
+#include "Interpolation.h"
+#include "Segmentation.h"
+
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/core_c.h>
+#include <opencv2/core/eigen.hpp>
 
 
  Gui::Gui( QWidget* pParent, const char* pName, bool modal)
@@ -139,16 +145,24 @@ void Gui::RunApplication()
 	std::string las_name = mPointCloudNames.at(mpLASListCombo->currentIndex());
     pElement = dynamic_cast<PointCloudElement*> (pModel->getElement(las_name, "", NULL ));
 	Interpolation interp = Interpolation();
+	Segmentation seg = Segmentation();
 	float dem_spacing = mpDEMspacing->value();
+	int n_rows_tiles = mpHorizontalTiles->value();
+	int n_cols_tiles = mpVerticalTiles->value() ;
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
     dem = interp.generate_DEM( pElement, dem_spacing) ;
 	std::string path = "C:/Users/Roberta/Desktop/Results/";
 
 	if (dem.size() != -1) // check if DEM  matrix is null
     {
-	   interp.print_DEM_on_file( std::string(path) + "dem_from_gui.txt", dem);
-	   draw_raster_from_eigen_mat ("dem "+StringUtilities::toDisplayString(button_cont), dem, pElement);
+	   interp.print_DEM_on_file( std::string(path) + "dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
+	   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
+	   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
+	   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
+	   cv::Mat ciao= seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
+	   draw_raster_from_openCV_mat ("ciao " + StringUtilities::toDisplayString(button_cont), ciao, pElement);
 	}
+	
 	mpRunButton->setEnabled(true);
 }
 
@@ -167,6 +181,8 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
 	if (pDemOut == NULL)
     {
 		   warning_msg += "Unable to create DEM raster ("+ name +").\n";
+		   pProgress->updateProgress("Unable to create DEM raster ("+ name +").", 0, ERRORS);
+		   pStep->finalize(Message::Abort, "Unable to create DEM raster ("+ name +").");
 		   return false;
     }
 	   pDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
@@ -181,6 +197,8 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
 			if (!racc.isValid())
 			{
 				warning_msg += "Error writing output raster(" + name + ").";
+				pProgress->updateProgress("Error writing output raster(" + name + ").", 0, ERRORS);
+		        pStep->finalize(Message::Abort, "Error writing output raster(" + name + ").");
 				return false;
 			}
 			pProgress->updateProgress("Drawing DEM raster", row * 100 / eigen_matrix.rows(), NORMAL);
@@ -200,5 +218,13 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
 	   pProgress->updateProgress("DEM raster is drawn.", 100, NORMAL);
 	   pStep->finalize();
 
+	return true;
+}
+
+bool Gui::draw_raster_from_openCV_mat (std::string name, cv::Mat image, PointCloudElement* pElement)
+{
+	image.convertTo(image, CV_32FC1);
+	Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> image_Eigen(image.ptr<float>(), image.rows, image.cols);
+	Gui::draw_raster_from_eigen_mat (name, image_Eigen, pElement);
 	return true;
 }

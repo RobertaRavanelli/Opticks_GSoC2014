@@ -30,6 +30,9 @@
 #include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
 #include <Eigen/Eigenvalues>
 #include "StringUtilities.h"
+#include <opencv2/core/core.hpp>
+
+
 
 class Gui: public QDialog//,public ViewerShell 
 {
@@ -59,6 +62,7 @@ private:
     PointCloudElement* pElement;
 	void init();
 	bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> median_Eigen, PointCloudElement* pElement);
+	bool Gui::draw_raster_from_openCV_mat (std::string name, cv::Mat image, PointCloudElement* pElement);
 	std::string warning_msg;
 	int button_cont;
 };

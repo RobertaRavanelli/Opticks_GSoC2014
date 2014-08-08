@@ -136,16 +136,6 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    int n_rows = 8;// 4
    int n_cols = 10;// 5
 
-   
-   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
-   dem = interp.generate_DEM( pElement, post_spacing) ;
-
-   if (dem.size() != -1) // check if DEM  matrix is null
-   {
-	   prova.draw_raster_from_eigen_mat ("trial_int_class", dem,  pElement);
-	   //interp.print_DEM_on_file( std::string(prova.path)+ "prva.txt", dem);
-   }
-
    //prova.generate_raster_from_intensity(pElement, post_spacing);
 
    if(prova.generate_DEM(pElement, post_spacing, n_rows,n_cols) == true)
@@ -161,7 +151,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    progress.report("Computing RANSAC", 40, NORMAL);
    prova.connected_components("buildings_for_connected_components.png", pElement);
    //prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold, progress);
-   //prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
+   prova.Ransac_for_buildings(post_spacing, pElement, RANSAC_threshold);
 
    
    //prova.ComputeModel(pElement, RANSAC_threshold);// treshold =0.02

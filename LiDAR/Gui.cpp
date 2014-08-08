@@ -18,29 +18,56 @@
 #include <Qt/qevent.h>
 #include <QtGui/QMessageBox>
 #include "Interpolation.h"
-
+#include "Progress.h"
+#include "ProgressResource.h"
 
 
  Gui::Gui( QWidget* pParent, const char* pName, bool modal)
 : QDialog(pParent)
 {
 	setModal( FALSE );
-	resize(400, 400);
-	setWindowTitle(QString::fromStdString("prova"));
+	//resize(400, 400);
+	setWindowTitle(QString::fromStdString("LiDAR roof extraction"));
 	
 	mpRunButton = new QPushButton( "Run the Plug-In", this );
 	mpDEMspacing = new QDoubleSpinBox(this);
-
+	mpRANSACthreshold = new QDoubleSpinBox(this);
+	mpHorizontalTiles = new QDoubleSpinBox(this);
+	mpVerticalTiles = new QDoubleSpinBox(this);
 	mpLASListCombo = new QComboBox(this);
-	mpLASListCombo->setFixedSize(200,20);
+
+	mpLASListCombo -> setFixedSize(300,20);
+	mpDEMspacing -> setFixedSize(50,20);
+	mpHorizontalTiles -> setFixedSize(50,20);
+	mpVerticalTiles -> setFixedSize(50,20);
+    mpRANSACthreshold -> setFixedSize(50,20);
+
+	QLabel *SelectLAS = new QLabel("Select the input .las file");
+	QLabel *dem_spacing_unit = new QLabel("m/ft");//it depends from the reference system used in the file
+	QLabel *SelectDEMspacing = new QLabel("Select the spacing for the DEM");
+	QLabel *SelectTILEnumber = new QLabel("Select the number of tiles in which to divide the DEM raster");
+	QLabel *xlabel = new QLabel("X");
+	QLabel *SelectRANSACthreshold = new QLabel("Select the value of the RANSAC threshold");
+	QLabel *RANSAC_threshold_unit = new QLabel("m/ft");//it depends from the reference system used in the file
+	
 
 	// Layout
     QGridLayout* pGrid = new QGridLayout(this);
-    pGrid->setMargin(0);
-    pGrid->setSpacing(5);
-	pGrid->addWidget(mpLASListCombo, 0, 0,1,3);
-	pGrid->addWidget(mpDEMspacing, 1, 1);
-	pGrid->addWidget(mpRunButton, 2, 2);
+   /* pGrid->setMargin(0);
+    pGrid->setSpacing(5);*/
+	pGrid->addWidget(SelectLAS, 0, 0, 1, 6);
+	pGrid->addWidget(mpLASListCombo, 1, 0, 1, 6);
+	pGrid->addWidget(SelectDEMspacing, 2, 0, 1, 1);
+	pGrid->addWidget(mpDEMspacing, 3, 0, 1, 1);
+    pGrid->addWidget(dem_spacing_unit, 3, 1);
+	pGrid->addWidget(SelectTILEnumber, 4, 0);
+	pGrid->addWidget(mpHorizontalTiles, 5, 0, 1, 1);
+	pGrid->addWidget(xlabel, 5, 1);
+	pGrid->addWidget(mpVerticalTiles, 5, 2, 1, 1);
+	pGrid->addWidget(SelectRANSACthreshold, 6, 0);
+	pGrid->addWidget(mpRANSACthreshold, 7, 0);
+	pGrid->addWidget(RANSAC_threshold_unit, 7, 1);
+	pGrid->addWidget(mpRunButton, 8, 8);
 	
 	// Connections
 	VERIFYNRV(connect(mpRunButton, SIGNAL( clicked() ), this, SLOT( RunApplication() )));
@@ -88,6 +115,20 @@ void Gui::init()
 
    mpDEMspacing ->setMinimum(1);
    mpDEMspacing ->setMaximum(10);
+   mpDEMspacing ->setValue(5);
+
+
+   mpRANSACthreshold ->setMinimum(0.1);
+   mpRANSACthreshold ->setMaximum(5);
+   mpRANSACthreshold ->setValue(1);
+
+   mpHorizontalTiles ->setMinimum(1);
+   mpHorizontalTiles ->setMaximum(20);
+   mpHorizontalTiles ->setValue(8);
+
+   mpVerticalTiles ->setMinimum(1);
+   mpVerticalTiles ->setMaximum(20);
+   mpVerticalTiles ->setValue(10);
 }
 
 
@@ -98,26 +139,36 @@ void Gui::RunApplication()
 	std::string las_name = mPointCloudNames.at(mpLASListCombo->currentIndex());
     pElement = dynamic_cast<PointCloudElement*> (pModel->getElement(las_name, "", NULL ));
 	Interpolation interp = Interpolation();
-	float post_spacing = mpDEMspacing->value();//5.0f;//5.0f
+	float dem_spacing = mpDEMspacing->value();
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
-    dem = interp.generate_DEM( pElement, post_spacing) ;
+    dem = interp.generate_DEM( pElement, dem_spacing) ;
 	std::string path = "C:/Users/Roberta/Desktop/Results/";
-	interp.print_DEM_on_file( std::string(path) + "dem_from_gui.txt", dem);
-	draw_raster_from_eigen_mat ("dem "+StringUtilities::toDisplayString(button_cont), dem, pElement);
+
+	if (dem.size() != -1) // check if DEM  matrix is null
+    {
+	   interp.print_DEM_on_file( std::string(path) + "dem_from_gui.txt", dem);
+	   draw_raster_from_eigen_mat ("dem "+StringUtilities::toDisplayString(button_cont), dem, pElement);
+	}
 	mpRunButton->setEnabled(true);
 }
 
 
 bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix, PointCloudElement* pElement)
 {
+	StepResource pStep("Drawing DEM raster", "app", "8d9c42c6-1e5a-11e4-b4be-b2227cce2b54");
+	ProgressResource pResource("ProgressBar");
+	Progress *pProgress = pResource.get(); 
+	//pProgress-> setSettingAutoClose(false);
+	pProgress-> setSettingAutoClose(true);
+
 	const float badVal = -9999.f;
 	
 	RasterElement* pDemOut = RasterUtilities::createRasterElement(name,  static_cast<int>(eigen_matrix.rows()), static_cast<int>(eigen_matrix.cols()), FLT4BYTES, true, pElement);
-	   if (pDemOut == NULL)
-	   {
+	if (pDemOut == NULL)
+    {
 		   warning_msg += "Unable to create DEM raster ("+ name +").\n";
 		   return false;
-	   }
+    }
 	   pDemOut->getStatistics()->setBadValues(std::vector<int>(1, (int)badVal));
 	   FactoryResource<DataRequest> pReq;
 	   pReq->setWritable(true);
@@ -132,6 +183,7 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
 				warning_msg += "Error writing output raster(" + name + ").";
 				return false;
 			}
+			pProgress->updateProgress("Drawing DEM raster", row * 100 / eigen_matrix.rows(), NORMAL);
 			*reinterpret_cast<float*>(racc->getColumn()) = eigen_matrix(row, col);
 			racc->nextColumn();
 			}
@@ -145,5 +197,8 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
          UndoLock lock(pView);
          pView->createLayer(RASTER, pDemOut);
 	   }
+	   pProgress->updateProgress("DEM raster is drawn.", 100, NORMAL);
+	   pStep->finalize();
+
 	return true;
 }

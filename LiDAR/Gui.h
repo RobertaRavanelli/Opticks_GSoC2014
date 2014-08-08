@@ -52,7 +52,9 @@ private:
     QPushButton* mpRunButton;
     QComboBox* mpLASListCombo;
 	QDoubleSpinBox* mpDEMspacing;
-	//GRID GuiGrid;
+	QDoubleSpinBox* mpRANSACthreshold;
+	QDoubleSpinBox* mpHorizontalTiles;
+	QDoubleSpinBox* mpVerticalTiles;
 	Service<ModelServices> pModel;
     PointCloudElement* pElement;
 	void init();

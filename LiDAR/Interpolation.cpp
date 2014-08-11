@@ -120,7 +120,7 @@ bool Interpolation::print_DEM_on_file(std::string name_file, Eigen::Matrix<float
 			{
 				dem_file << row << '\t' << col << '\t' << demRM(row, col) << '\n';  
 			}
-			pProgress->updateProgress("Writing DEM on a text file", row * 100 / demRM.rows(), NORMAL);
+			pProgress->updateProgress("Writing DEM ("+ name_file + ") on a text file", row * 100 / demRM.rows(), NORMAL);
 	}
 	dem_file.close();
 

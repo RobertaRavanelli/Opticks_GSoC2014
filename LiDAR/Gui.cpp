@@ -159,8 +159,14 @@ void Gui::RunApplication()
 	   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
 	   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
 	   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
-	   cv::Mat ciao= seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
-	   draw_raster_from_openCV_mat ("ciao " + StringUtilities::toDisplayString(button_cont), ciao, pElement);
+	   cv::Mat original_tiles_merged = seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
+	   draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
+	   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(original_tiles_merged, n_rows_tiles, n_cols_tiles);
+	   cv::Mat buildings =  original_tiles_merged.mul(result_watershed);
+	   draw_raster_from_openCV_mat ("buildings " + StringUtilities::toDisplayString(button_cont), buildings, pElement);
+	   seg.connected_components(result_watershed);
+	   seg.draw_buildings_contours(result_watershed);
+	   seg.process_all_point_cloud_with_pca(n_rows_tiles, n_cols_tiles);
 	}
 	
 	mpRunButton->setEnabled(true);
@@ -201,7 +207,7 @@ bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eig
 		        pStep->finalize(Message::Abort, "Error writing output raster(" + name + ").");
 				return false;
 			}
-			pProgress->updateProgress("Drawing DEM raster", row * 100 / eigen_matrix.rows(), NORMAL);
+			pProgress->updateProgress("Drawing DEM raster ("+ name +")", row * 100 / eigen_matrix.rows(), NORMAL);
 			*reinterpret_cast<float*>(racc->getColumn()) = eigen_matrix(row, col);
 			racc->nextColumn();
 			}

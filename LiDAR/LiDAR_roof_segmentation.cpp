@@ -65,7 +65,7 @@ LiDAR_roof_segmentation::LiDAR_roof_segmentation():
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
    setType("Sample");
-   setMenuLocation("[Point Cloud]/Roof Extraction 2");
+   setMenuLocation("[Point Cloud]/Roof Extraction");
    setAbortSupported(false);
 }
 

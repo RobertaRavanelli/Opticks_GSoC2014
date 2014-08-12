@@ -164,6 +164,7 @@
     <ClCompile Include="LiDAR_roof_segmentation.cpp" />
     <ClCompile Include="ModuleManager.cpp" />
     <ClCompile Include="Ransac.cpp" />
+    <ClCompile Include="RansacOld.cpp" />
     <ClCompile Include="Segmentation.cpp" />
     <ClCompile Include="Tutorial1.cpp" />
   </ItemGroup>
@@ -173,6 +174,7 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Filename).h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp;%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="Ransac.h" />
     <ClInclude Include="Segmentation.h" />
     <CustomBuild Include="Gui.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTBIN)\moc.exe" "%(FullPath)" -o "$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp"</Command>
@@ -180,7 +182,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp;%(Outputs)</Outputs>
     </CustomBuild>
     <ClInclude Include="Interpolation.h" />
-    <ClInclude Include="Ransac.h" />
+    <ClInclude Include="RansacOld.h" />
     <CustomBuild Include="Tutorial1.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTBIN)\moc.exe" "%(FullPath)" -o "$(BuildDir)\Moc\$(ProjectName)\moc_%(Filename).cpp"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Filename).h...</Message>

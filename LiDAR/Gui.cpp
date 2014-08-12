@@ -21,7 +21,7 @@
 #include "ProgressResource.h"
 #include "Interpolation.h"
 #include "Segmentation.h"
-
+#include "Ransac.h"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core_c.h>
@@ -148,9 +148,11 @@ void Gui::RunApplication()
 	Segmentation seg = Segmentation();
 	float dem_spacing = mpDEMspacing->value();
 	int n_rows_tiles = mpHorizontalTiles->value();
-	int n_cols_tiles = mpVerticalTiles->value() ;
+	int n_cols_tiles = mpVerticalTiles->value();
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
     dem = interp.generate_DEM( pElement, dem_spacing) ;
+	double RANSAC_threshold =   mpRANSACthreshold->value();
+	
 	std::string path = "C:/Users/Roberta/Desktop/Results/";
 
 	if (dem.size() != -1) // check if DEM  matrix is null
@@ -159,9 +161,13 @@ void Gui::RunApplication()
 	   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
 	   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
 	   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
+	   //* ORIGINAL_TILES_MERGED is the real raster input for all the processing methods of the Plug-In,
+	   //* since the way I use to tile the original raster makes lose some pixels
+	   //* (however they are all on the last columns and/or last rows, so the original raster conformation is preserved - no problems for the image coordinates of the pixels)
+	   //* for example, original_tiles_merged is needed for the mask application (method use to retrieve the z coordinate of every pixel identified as belonging to a building)
 	   cv::Mat original_tiles_merged = seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
 	   draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
-	   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(original_tiles_merged, n_rows_tiles, n_cols_tiles);
+	   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(n_rows_tiles, n_cols_tiles);
 	   cv::Mat buildings =  original_tiles_merged.mul(result_watershed);
 	   draw_raster_from_openCV_mat ("buildings " + StringUtilities::toDisplayString(button_cont), buildings, pElement);
 	   seg.connected_components(result_watershed);
@@ -169,6 +175,37 @@ void Gui::RunApplication()
 	   seg.process_all_point_cloud_with_pca(n_rows_tiles, n_cols_tiles);
 	}
 	
+	/*StepResource pStep("RANSAC", "app", "93a9a636-218e-11e4-969b-b2227cce2b54");
+	ProgressResource pResource("ProgressBar");
+	Progress *pProgress = pResource.get(); 
+	pProgress-> setSettingAutoClose(false);*/
+	Ransac prova= Ransac();
+	//prova.ComputeModel(pElement, 0.00000001);// treshold =0.02
+	/*pProgress->updateProgress("prova\n"+prova.ransac_msg,90, NORMAL);
+	pStep->finalize();*/
+
+		Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
+		matrix.setConstant(10000, 3, 0.0);
+
+
+		for (int i =0; i< 9000; i++)
+		{
+			 matrix(i,0) = i*i;// % 100;
+			 srand (time(NULL));
+			 matrix(i,1) = 5*i+21;// rand() % 33;
+			 matrix(i,2) = 10.0;
+		}
+
+		for (int i =9000; i< 10000; i++)
+		{
+			 matrix(i,0) = rand() % 10;
+			 matrix(i,1) = rand() % 200;
+			 matrix(i,2) = rand() % 700;
+		}
+
+		prova.ComputeModel(matrix, RANSAC_threshold);
+
+	std::string ciao = prova.ransac_msg;
 	mpRunButton->setEnabled(true);
 }
 

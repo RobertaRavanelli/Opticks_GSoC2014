@@ -41,7 +41,7 @@
 #include "Undo.h"
 #include <limits>
 #include "StringUtilities.h"
-#include "Ransac.h"
+#include "RansacOld.h"
 #include <time.h>
 #include <QtGui/QApplication>
 #include <QtGui/QMessageBox>
@@ -61,7 +61,7 @@ Tutorial1::Tutorial1():
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
    setType("Sample");
-   setMenuLocation("[Point Cloud]/Roof Extraction");
+   setMenuLocation("[Point Cloud]/Roof Extraction OLD version (no GUI)");
    setAbortSupported(false);
 }
 
@@ -124,7 +124,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    pOutArgList->setPlugInArgValue("Count", &count);*/
    
    Interpolation interp = Interpolation();
-   Ransac prova = Ransac();
+   RansacOld prova = RansacOld();
    
    //progress.report("Calculating point cloud statistics", 10, NORMAL);
    //prova.generate_point_cloud_statistics(pElement);

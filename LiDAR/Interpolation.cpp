@@ -18,19 +18,16 @@ Interpolation::Interpolation(void)
 {
 }
 
-
 Interpolation::~Interpolation(void)
 {
 }
 
-//bool Interpolation::generate_DEM(PointCloudElement* pElement, float post_spacing, int n_rows_tiles, int n_cols_tiles) //post_spacing is the pixel spacing of the dem matrix
-Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Interpolation::generate_DEM(PointCloudElement* pElement, float post_spacing) // int n_rows_tiles, int n_cols_tiles) //post_spacing is the pixel spacing of the dem matrix
+Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Interpolation::generate_DEM(PointCloudElement* pElement, float post_spacing) 
 {
 	   StepResource pStep("Generating DEM", "app", "ffe16048-1e58-11e4-b4be-b2227cce2b54");
 	   
 	   ProgressResource pResource("ProgressBar");
 	   Progress *pProgress = pResource.get(); 
-	   //pProgress-> setSettingAutoClose(false);
 	   pProgress-> setSettingAutoClose(true);
 
 	   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> demRM;// dem stored in a Row major eigen matrix
@@ -73,7 +70,6 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Interpolat
 		  }
 		  if (idx % adv == 0)
 		  {
-			 //progress.report("Generating DEM", ++prog, NORMAL);
 			  pProgress->updateProgress("Generating DEM", ++prog, NORMAL);
 		  }
 		  if (!acc->isPointValid())
@@ -107,7 +103,6 @@ bool Interpolation::print_DEM_on_file(std::string name_file, Eigen::Matrix<float
 	StepResource pStep("Writing DEM on a text file", "app", "c0c1c382-1f1e-11e4-b0cb-b2227cce2b54");
 	ProgressResource pResource("ProgressBar");
 	Progress *pProgress = pResource.get(); 
-	//pProgress-> setSettingAutoClose(false);
     pProgress-> setSettingAutoClose(true);
 	
 	std::ofstream dem_file;

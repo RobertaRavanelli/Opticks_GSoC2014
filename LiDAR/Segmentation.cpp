@@ -235,7 +235,7 @@ bool Segmentation::watershed_segmentation(std::string image_name)//, PointCloudE
     markers = fg + bg;
 
     // Create watershed segmentation object 
-    WatershedSegmenter2 segmenter;
+    WatershedSegmenter segmenter;
     segmenter.setMarkers(markers);
 
     cv::Mat result = segmenter.process(median_image);
@@ -301,7 +301,7 @@ cv::Scalar Segmentation::cv_matrix_mode (cv::Mat image)
 		return mode;
 }
 
-cv::Mat Segmentation::process_all_point_cloud_with_watershed(cv::Mat original_tiles_merged, int n_rows, int n_cols)//, PointCloudElement* pElement)
+cv::Mat Segmentation::process_all_point_cloud_with_watershed(int n_rows, int n_cols)//, PointCloudElement* pElement)
 {
 	k_for_process_all_point_cloud = 0;
 	result_tiles_array.resize(n_rows * n_cols);  

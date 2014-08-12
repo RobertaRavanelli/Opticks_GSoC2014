@@ -27,7 +27,7 @@ public:
 	std::string segmentation_msg;
 	std::string path;
 	
-	std::vector<cv::Mat> result_tiles_array;
+	std::vector<cv::Mat> result_tiles_array;// stores the result of the segmentation algorithm
 	
 	//* blobs is a std::vector of cv::Point
 	//* each row of this std::vector stores the image coordinates of all the pixels identified as belonging to a specific building
@@ -42,7 +42,7 @@ public:
 	bool Segmentation::watershed_segmentation(std::string image_name);
 	bool Segmentation::pca_segmentation(std::string image_name);
 
-	cv::Mat Segmentation::process_all_point_cloud_with_watershed(cv::Mat original_tiles_merged, int n_rows, int n_cols);
+	cv::Mat Segmentation::process_all_point_cloud_with_watershed(int n_rows, int n_cols);
 	bool Segmentation::process_all_point_cloud_with_pca(int n_rows, int n_cols);
 
 	cv::Scalar Segmentation::cv_matrix_mode (cv::Mat image);
@@ -50,7 +50,7 @@ public:
 	bool Segmentation::draw_buildings_contours(cv::Mat image);
 };
 
-class WatershedSegmenter2
+class WatershedSegmenter
 {
 private:
     cv::Mat markers;

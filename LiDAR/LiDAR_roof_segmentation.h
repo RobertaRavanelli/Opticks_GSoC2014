@@ -1,4 +1,7 @@
-/* and is subject to the terms and conditions of the
+/*
+ * The information in this file is
+ * Copyright(c) 2007 Ball Aerospace & Technologies Corporation
+ * and is subject to the terms and conditions of the
  * GNU Lesser General Public License Version 2.1
  * The license text is available from   
  * http://www.gnu.org/licenses/lgpl.html
@@ -7,13 +10,10 @@
 #ifndef LIDAR_ROOF_SEGMENTATION_H
 #define LIDAR_ROOF_SEGMENTATION_H
 
-
 #include "Gui.h"
 #include <QtCore/QObject>
 #include "ViewerShell.h"
-//#include "AlgorithmShell.h"
 
-//class Tutorial1 :public QObject, public AlgorithmShell // algorithm shell gives problem with teh gui...
 class LiDAR_roof_segmentation :public QObject,public ViewerShell 
 {
 	Q_OBJECT

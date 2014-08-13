@@ -16,26 +16,16 @@
 #include "PointCloudDataDescriptor.h"
 #include "PointCloudDataRequest.h"
 #include "PointCloudElement.h"
-//#include "PointCloudView.h"
 #include "ProgressTracker.h"
-//#include "PseudocolorLayer.h"
 #include "RasterElement.h"
-//#include "RasterUtilities.h"
 #include "SpatialDataView.h"
 #include "SpatialDataWindow.h"
-#include "Statistics.h"
-//#include "switchOnEncoding.h" 
+#include "Statistics.h" 
 #include "Undo.h"
-//#include <limits>
 #include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
-//#include <Eigen/Eigenvalues>
 #include "StringUtilities.h"
-//#include <iostream>
 #include <fstream>
-// needed by the Raster generator
 #include "DataRequest.h"
-//#include "AlgorithmShell.h"
-//#include "DesktopServices.h"
 #include "DataAccessor.h"
 #include "DataAccessorImpl.h"
 

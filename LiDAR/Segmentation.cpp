@@ -6,6 +6,7 @@
  * The license text is available from   
  * http://www.gnu.org/licenses/lgpl.html
  */
+
 #include "Segmentation.h"
 #include "StringUtilities.h"
 #include <fstream>
@@ -484,7 +485,7 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 	ProgressResource pResource("ProgressBar");
 	Progress *pProgress = pResource.get(); 
 	pProgress-> setSettingAutoClose(true);
-	
+	pProgress->updateProgress("Computing RANSAC on all buildings", 0, NORMAL);
 	Ransac_buildings = Ransac();
 	cv::Mat roof_image = cv::Mat::zeros(original_tiles_merged.size(), CV_8UC3);
 		
@@ -498,15 +499,13 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 	std::ofstream cont_file;
 	cont_file.open (std::string(path) + "Number_of_RANSAC_applications.txt"); 
 	for(int i = 0; i < blobs.size(); i++)
-	//for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
 	{// i index is the building (blob) index
-		//progress.report("Computing RANSAC on all buildings", static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
 		pProgress->updateProgress("Computing RANSAC on all buildings\nBuilding "+ StringUtilities::toDisplayString(i) + " on "+ StringUtilities::toDisplayString(blobs.size()), static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
 		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
 		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
 		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
 		
-		// retrieve the  X, Y, Z coordinate for each pixel of all the buildings
+		// the j loop retrieves the  X, Y, Z coordinate for each pixel of all the buildings
 		for(int j = 0; j < blobs[i].size(); j++) 
 		{// j index is the pixel index for the single building
 		 // loop on all the pixel of the SINGLE building

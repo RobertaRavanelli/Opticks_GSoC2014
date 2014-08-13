@@ -32,7 +32,6 @@
 : QDialog(pParent)
 {
 	setModal( FALSE );
-	//resize(400, 400);
 	setWindowTitle(QString::fromStdString("LiDAR roof extraction"));
 	
 	mpRunButton = new QPushButton( "Run the Plug-In", this );
@@ -56,11 +55,8 @@
 	QLabel *SelectRANSACthreshold = new QLabel("Select the value of the RANSAC threshold");
 	QLabel *RANSAC_threshold_unit = new QLabel("m/ft");//it depends from the reference system used in the file
 	
-
 	// Layout
     QGridLayout* pGrid = new QGridLayout(this);
-   /* pGrid->setMargin(0);
-    pGrid->setSpacing(5);*/
 	pGrid->addWidget(SelectLAS, 0, 0, 1, 6);
 	pGrid->addWidget(mpLASListCombo, 1, 0, 1, 6);
 	pGrid->addWidget(SelectDEMspacing, 2, 0, 1, 1);
@@ -140,77 +136,83 @@ void Gui::init()
 
 void Gui::RunApplication()
 {
-	button_cont++;
-	mpRunButton->setEnabled(false);
-	std::string las_name = mPointCloudNames.at(mpLASListCombo->currentIndex());
-    pElement = dynamic_cast<PointCloudElement*> (pModel->getElement(las_name, "", NULL ));
-	Interpolation interp = Interpolation();
-	Segmentation seg = Segmentation();
-	float dem_spacing = mpDEMspacing->value();
-	int n_rows_tiles = mpHorizontalTiles->value();
-	int n_cols_tiles = mpVerticalTiles->value();
-	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
-    dem = interp.generate_DEM( pElement, dem_spacing) ;
-	double RANSAC_threshold =   mpRANSACthreshold->value();
-	
-	std::string path = "C:/Users/Roberta/Desktop/Results/";
-
-	if (dem.size() != -1) // check if DEM  matrix is null
-    {
-	   interp.print_DEM_on_file( std::string(path) + "dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
-	   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
-	   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
-	   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
-	   //* ORIGINAL_TILES_MERGED is the real raster input for all the processing methods of the Plug-In,
-	   //* since the way I use to tile the original raster makes lose some pixels
-	   //* (however they are all on the last columns and/or last rows, so the original raster conformation is preserved - no problems for the image coordinates of the pixels)
-	   //* for example, original_tiles_merged is needed for the mask application (method use to retrieve the z coordinate of every pixel identified as belonging to a building)
-	   cv::Mat original_tiles_merged = seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
-	   draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
-	   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(n_rows_tiles, n_cols_tiles);
-	   cv::Mat buildings =  original_tiles_merged.mul(result_watershed);
-	   draw_raster_from_openCV_mat ("buildings " + StringUtilities::toDisplayString(button_cont), buildings, pElement);
-	   seg.connected_components(result_watershed);
-	   seg.draw_buildings_contours(result_watershed);
-	   seg.process_all_point_cloud_with_pca(n_rows_tiles, n_cols_tiles);
-	   seg.Ransac_for_buildings(dem_spacing, RANSAC_threshold, original_tiles_merged);
-	   seg.print_result();
-	}
-	
-	/*StepResource pStep("RANSAC", "app", "93a9a636-218e-11e4-969b-b2227cce2b54");
+	StepResource pStep( "LiDAR roof extraction", "app", "4c607288-2331-11e4-ae9f-b2227cce2b54" );
 	ProgressResource pResource("ProgressBar");
 	Progress *pProgress = pResource.get(); 
-	pProgress-> setSettingAutoClose(false);*/
-	Ransac prova= Ransac();
-	//prova.ComputeModel(pElement, 0.00000001);// treshold =0.02
-	/*pProgress->updateProgress("prova\n"+prova.ransac_msg,90, NORMAL);
-	pStep->finalize();*/
+	pProgress-> setSettingAutoClose(true);
+	
+	button_cont++;
+	mpRunButton->setEnabled(false);
+	
+	if (mPointCloudNames.empty() == true) // this is like to check if if (pElement == NULL)
+    {
+	   pProgress->updateProgress("A valid point cloud element must be provided.", 0, ERRORS);
+	   pStep->finalize(Message::Abort, "A valid point cloud element must be provided.");
+	   Gui::init();// needed to reload las files
+	   mpRunButton->setEnabled(true);
+    }
+	else
+	{
+		std::string las_name = mPointCloudNames.at(mpLASListCombo->currentIndex());
+		pElement = dynamic_cast<PointCloudElement*> (pModel->getElement(las_name, "", NULL ));
+	
+		Interpolation interp = Interpolation();
+		Segmentation seg = Segmentation();
+		float dem_spacing = mpDEMspacing->value();
+		int n_rows_tiles = mpHorizontalTiles->value();
+		int n_cols_tiles = mpVerticalTiles->value();
+		Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dem;
+		dem = interp.generate_DEM( pElement, dem_spacing) ;
+		double RANSAC_threshold =   mpRANSACthreshold->value();
+	
+		std::string path = "C:/Users/Roberta/Desktop/Results/";
 
-		Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
-		matrix.setConstant(10000, 3, 0.0);
-
-
-		for (int i =0; i< 9000; i++)
+		if (dem.size() != -1) // check if DEM  matrix is null
 		{
-			 matrix(i,0) = i*i;// % 100;
-			 srand (time(NULL));
-			 matrix(i,1) = 5*i+21;// rand() % 33;
-			 matrix(i,2) = 10.0;
+		   interp.print_DEM_on_file( std::string(path) + "dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
+		   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
+		   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
+		   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
+		   //* ORIGINAL_TILES_MERGED is the real raster input for all the processing methods of the Plug-In,
+		   //* since the way I use to tile the original raster makes lose some pixels
+		   //* (however they are all on the last columns and/or last rows, so the original raster conformation is preserved - no problems for the image coordinates of the pixels)
+		   //* for example, original_tiles_merged is needed for the mask application (method use to retrieve the z coordinate of every pixel identified as belonging to a building)
+		   cv::Mat original_tiles_merged = seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
+		   draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
+		   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(n_rows_tiles, n_cols_tiles);
+		   cv::Mat buildings =  original_tiles_merged.mul(result_watershed);
+		   draw_raster_from_openCV_mat ("buildings " + StringUtilities::toDisplayString(button_cont), buildings, pElement);
+		   seg.connected_components(result_watershed);
+		   seg.draw_buildings_contours(result_watershed);
+		   seg.process_all_point_cloud_with_pca(n_rows_tiles, n_cols_tiles);
+		   seg.Ransac_for_buildings(dem_spacing, RANSAC_threshold, original_tiles_merged);
+		   seg.print_result();
 		}
-
-		for (int i =9000; i< 10000; i++)
-		{
-			 matrix(i,0) = rand() % 10;
-			 matrix(i,1) = rand() % 200;
-			 matrix(i,2) = rand() % 700;
-		}
-
-		prova.ComputeModel(matrix, RANSAC_threshold);
-
-	std::string ciao = prova.ransac_msg;
-	mpRunButton->setEnabled(true);
+	
+			// RANSAC test: it must return a=0, b=0, c=1 and d=-10: the plane Z=10
+			Ransac Ransac_test = Ransac();
+			Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
+			matrix.setConstant(10000, 3, 0.0);
+			for (int i = 0; i< 9000; i++)
+			{
+				 matrix(i,0) = i*i;// % 100;
+				 srand (time(NULL));
+				 matrix(i,1) = 5*i+21;// rand() % 33;
+				 matrix(i,2) = 10.0;
+			}
+			for (int i = 9000; i< 10000; i++)
+			{
+				 matrix(i,0) = rand() % 10;
+				 matrix(i,1) = rand() % 200;
+				 matrix(i,2) = rand() % 700;
+			}
+			Ransac_test.ComputeModel(matrix, RANSAC_threshold);
+			std::string ciao = Ransac_test.ransac_msg;
+	
+		mpRunButton->setEnabled(true);
+		pStep->finalize(Message::Success);
+	}
 }
-
 
 bool Gui::draw_raster_from_eigen_mat (std::string name, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix, PointCloudElement* pElement)
 {

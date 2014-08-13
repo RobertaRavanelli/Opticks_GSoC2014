@@ -1,5 +1,3 @@
-
-
 /*
  * The information in this file is
  * Copyright(c) 2007 Ball Aerospace & Technologies Corporation
@@ -15,18 +13,12 @@
 #include "PlugInRegistration.h"
 #include "Progress.h"
 #include "LiDAR_roof_segmentation.h"
-
-
 #include "DataAccessor.h"
 #include "DataAccessorImpl.h"
 #include "DataRequest.h"
 #include "DesktopServices.h"
 #include "ObjectFactory.h"
-//#include <ModelServices.h>
-//#include "Window.h"
 #include "MessageLogResource.h"
-
- 
 #include "PointCloudAccessor.h"
 #include "PointCloudAccessorImpl.h"
 #include "PointCloudDataDescriptor.h"
@@ -34,11 +26,6 @@
 #include "PointCloudElement.h"
 #include "PointCloudView.h"
 #include "ProgressTracker.h"
-//#include "PseudocolorLayer.h"
-//#include "RasterElement.h"
-//#include "RasterUtilities.h"
-//#include "SpatialDataView.h" 
-//#include "SpatialDataWindow.h"
 #include "Statistics.h"
 #include "switchOnEncoding.h"
 #include "Undo.h"
@@ -58,9 +45,9 @@ LiDAR_roof_segmentation::LiDAR_roof_segmentation():
    mpGui(NULL)
 {
    setDescriptorId("{09d9618e-1d57-11e4-ba18-b2227cce2b54}");
-   setName("LIDAR Roof Extraction 2");
-   setDescription("Creating your first plug-in.");
-   setCreator("Opticks Community");
+   setName("LIDAR Roof Extraction");
+   setDescription("Plug-In developed for the GSoC 2014 project http://opticks.org/confluence/display/~roberta.ravanelli/GSoC+2014%3A+LiDAR+segmentation+Plug-In+based+on+RANSAC+and+PCA+algorithms+for+Opticks");
+   setCreator("Roberta Ravanelli <roberta.ravanelli@uniroma1.it>");
    setVersion("Sample");
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
@@ -71,12 +58,7 @@ LiDAR_roof_segmentation::LiDAR_roof_segmentation():
 
 LiDAR_roof_segmentation::~LiDAR_roof_segmentation()
 {
-	 /*Service<DesktopServices> pDesktop;
-     pDesktop->detach(SIGNAL_NAME(DesktopServices, AboutToShowPropertiesDialog),
-     Slot(this, &Gui::updatePropertiesDialog));
-     pDesktop->deleteWindow(mpDockWindow);*/
 }
-
 
 bool LiDAR_roof_segmentation::getInputSpecification(PlugInArgList*& pInArgList)
 {
@@ -89,10 +71,6 @@ bool LiDAR_roof_segmentation::getInputSpecification(PlugInArgList*& pInArgList)
 
 bool LiDAR_roof_segmentation::getOutputSpecification(PlugInArgList*& pOutArgList)
 {
-  /* VERIFY((pOutArgList = Service<PlugInManagerServices>()->getPlugInArgList()) != NULL);
-   pOutArgList->addArg<double>("Minimum", "The minimum value");
-   pOutArgList->addArg<double>("Maximum", "The maximum value");
-   pOutArgList->addArg<unsigned int>("Count", "The number of points in the point cloud");*/
    pOutArgList = NULL;
    return true;
 }
@@ -100,37 +78,33 @@ bool LiDAR_roof_segmentation::getOutputSpecification(PlugInArgList*& pOutArgList
 bool LiDAR_roof_segmentation::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
 {
 
-   if (pInArgList == NULL)
+ /*  if (pInArgList == NULL)
    {
       return false;
-   }
+   }*/
   /*  
   ProgressTracker progress(pInArgList->getPlugInArgValue<Progress>(Executable::ProgressArg()),
       "Identifying buildings\n", "app", getDescriptorId());*/
 
-  PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
+  //PointCloudElement* pElement = pInArgList->getPlugInArgValue<PointCloudElement>(Executable::DataElementArg());
+  /* if(pElement == NULL)
+   {return false;}*/
 
-
-   if (pElement == NULL)
-   {
-	  //progress.report("A valid point cloud element must be provided.", 0, ERRORS, true);
-      return false;
-   }
   
    showGui();
 
-   //progress.report("ciao", 100, NORMAL);
+ 
    return true;
 }
 
 bool LiDAR_roof_segmentation::showGui()
 {
 
-	StepResource pStep( "Start", "app", "a520c744-1d6c-11e4-a3ec-b2227cce2b54" );
+	StepResource pStep( "Start gui", "app", "a520c744-1d6c-11e4-a3ec-b2227cce2b54" );
 	
 	Service<DesktopServices> pDesktop;
 
-	mpGui = new Gui( pDesktop->getMainWidget(),"test", false);
+	mpGui = new Gui( pDesktop->getMainWidget(), "Gui", false);
 	VERIFYNR(connect(mpGui, SIGNAL(finished(int)), this, SLOT(dialogClosed())));
 	
 	mpGui->show();

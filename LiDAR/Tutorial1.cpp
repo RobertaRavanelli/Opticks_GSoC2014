@@ -13,17 +13,12 @@
 #include "PlugInRegistration.h"
 #include "Progress.h"
 #include "Tutorial1.h"
-
 #include "DataAccessor.h"
 #include "DataAccessorImpl.h"
 #include "DataRequest.h"
 #include "DesktopServices.h"
 #include "ObjectFactory.h"
-//#include <ModelServices.h>
-//#include "Window.h"
 #include "MessageLogResource.h"
-
- 
 #include "PointCloudAccessor.h"
 #include "PointCloudAccessorImpl.h"
 #include "PointCloudDataDescriptor.h"
@@ -31,11 +26,6 @@
 #include "PointCloudElement.h"
 #include "PointCloudView.h"
 #include "ProgressTracker.h"
-//#include "PseudocolorLayer.h"
-//#include "RasterElement.h"
-//#include "RasterUtilities.h"
-//#include "SpatialDataView.h" 
-//#include "SpatialDataWindow.h"
 #include "Statistics.h"
 #include "switchOnEncoding.h"
 #include "Undo.h"
@@ -46,7 +36,7 @@
 #include <QtGui/QApplication>
 #include <QtGui/QMessageBox>
 #include "SessionItemSerializer.h"
-#include "Interpolation.h"
+
 
 REGISTER_PLUGIN_BASIC(LidarRoof, Tutorial1);
 
@@ -54,9 +44,9 @@ Tutorial1::Tutorial1():
    mpGui(NULL)
 {
    setDescriptorId("{732D7E3E-1CE0-4D3B-B3A9-7F7B5F6B11B0}");
-   setName("LIDAR Roof Extraction");
-   setDescription("Creating your first plug-in.");
-   setCreator("Opticks Community");
+   setName("LIDAR Roof Extraction (Old version)");
+   setDescription("Plug-In developed for the GSoC 2014 project http://opticks.org/confluence/display/~roberta.ravanelli/GSoC+2014%3A+LiDAR+segmentation+Plug-In+based+on+RANSAC+and+PCA+algorithms+for+Opticks");
+   setCreator("Roberta Ravanelli <roberta.ravanelli@uniroma1.it>");
    setVersion("Sample");
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
@@ -123,7 +113,7 @@ bool Tutorial1::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgList)
    pOutArgList->setPlugInArgValue("Maximum", &maxX);
    pOutArgList->setPlugInArgValue("Count", &count);*/
    
-   Interpolation interp = Interpolation();
+  
    RansacOld prova = RansacOld();
    
    //progress.report("Calculating point cloud statistics", 10, NORMAL);

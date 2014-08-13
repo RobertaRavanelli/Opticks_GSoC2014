@@ -13,7 +13,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core_c.h>
-
+#include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
+#include "Ransac.h"
 
 class Segmentation
 {
@@ -33,6 +34,20 @@ public:
 	//* each row of this std::vector stores the image coordinates of all the pixels identified as belonging to a specific building
 	std::vector < std::vector<cv::Point2i> > blobs; 
 
+
+	Ransac Ransac_buildings;
+	//* buildingS is a std::vector of Eigen matrixes
+	//* each row of this std::vector is an Eigen matrix with rows = number of points belonging to the specific building and columns = 3 (x,y,z coordinates)
+	//* first row stores the x,y and z coordinates of all the points belonging to first identified building
+	//* second row stores the x,y and z coordinates of all the points belonging to second identified building...
+	std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> buildingS;
+
+	std::vector<std::vector<int>> buildingS_inliers;// stores the inliers for all the buildings (only first iteration - iteration number 0)
+	std::vector<std::vector<int>> buildingS_outliers;// stores the outliers for all the buildings (only first iteration - iteration number 0)
+	std::vector<Eigen::VectorXd> buildingS_plane_coefficients;// stores the plane parameters for all the buildings (only first iteration - iteration number 0)
+	std::vector<int> buldingS_number_inliers; // every row stores the number of inliers for each building (only first iteration - iteration number 0)
+
+
 	Segmentation(void);
 	~Segmentation(void);
 	std::vector<cv::Mat>  Segmentation::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols);
@@ -48,6 +63,8 @@ public:
 	cv::Scalar Segmentation::cv_matrix_mode (cv::Mat image);
 	bool Segmentation::connected_components(cv::Mat input);
 	bool Segmentation::draw_buildings_contours(cv::Mat image);
+	bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_threshold, cv::Mat original_tiles_merged);
+	bool Segmentation::print_result();
 };
 
 class WatershedSegmenter

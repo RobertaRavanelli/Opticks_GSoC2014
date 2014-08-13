@@ -9,7 +9,6 @@
 
 #include "Ransac.h"
 #include "StringUtilities.h"
-//#include <iostream>
 #include <fstream>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/random_device.hpp>
@@ -608,6 +607,7 @@ bool Ransac::optimizeModelCoefficients(Eigen::Matrix<double,Eigen::Dynamic, Eige
    
   return true;
 }
+
 
 /////////////////////// these methods are needed to compute eigen values and eigen vectors ///////////////////
 

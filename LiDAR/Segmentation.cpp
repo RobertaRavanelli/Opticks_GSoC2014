@@ -8,6 +8,10 @@
  */
 #include "Segmentation.h"
 #include "StringUtilities.h"
+#include <fstream>
+#include "Progress.h"
+#include "ProgressResource.h"
+#include "ProgressTracker.h"
 
 Segmentation::Segmentation(void)
 {
@@ -469,4 +473,274 @@ bool Segmentation::draw_buildings_contours(cv::Mat image)
      cv::imshow("Building contours", drawing);
 
 	 return true;
+}
+
+/////////////////////// RANSAC FOR BUILDINGS ////////////////////
+
+bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_threshold, cv::Mat original_tiles_merged)
+{   
+	StepResource pStep("Computing RANSAC on all the identified buildings", "app", "a2beb9b8-218e-11e4-969b-b2227cce2b54");
+	   
+	ProgressResource pResource("ProgressBar");
+	Progress *pProgress = pResource.get(); 
+	pProgress-> setSettingAutoClose(true);
+	
+	Ransac_buildings = Ransac();
+	cv::Mat roof_image = cv::Mat::zeros(original_tiles_merged.size(), CV_8UC3);
+		
+	buildingS.resize(blobs.size());
+	buildingS_inliers.resize(blobs.size());
+	buildingS_outliers.resize(blobs.size());
+	buildingS_plane_coefficients.resize(blobs.size());
+	buldingS_number_inliers.resize(blobs.size());
+
+	std::ofstream building_file;
+	std::ofstream cont_file;
+	cont_file.open (std::string(path) + "Number_of_RANSAC_applications.txt"); 
+	for(int i = 0; i < blobs.size(); i++)
+	//for(int i = 0; i < 10; i++)// up to 10 only to see if the method works
+	{// i index is the building (blob) index
+		//progress.report("Computing RANSAC on all buildings", static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
+		pProgress->updateProgress("Computing RANSAC on all buildings\nBuilding "+ StringUtilities::toDisplayString(i) + " on "+ StringUtilities::toDisplayString(blobs.size()), static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
+		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
+		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
+		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
+		
+		// retrieve the  X, Y, Z coordinate for each pixel of all the buildings
+		for(int j = 0; j < blobs[i].size(); j++) 
+		{// j index is the pixel index for the single building
+		 // loop on all the pixel of the SINGLE building
+		    int pixel_column = blobs[i][j].x;
+            int pixel_row = blobs[i][j].y;			
+
+			double x_building =  pixel_column * dem_spacing;// xMin + pixel_column * dem_spacing // object coordinate 
+			double y_building =  pixel_row * dem_spacing;// yMin + pixel_row * dem_spacing // object coordinate
+			double z_building = original_tiles_merged.at<float>(pixel_row, pixel_column);//object coordinate
+			
+			buildingS[i](j,0) = x_building;
+			buildingS[i](j,1) = y_building;
+			buildingS[i](j,2) = z_building;
+			 
+			building_file << pixel_row+1 <<  '\t' << pixel_column+1 <<  '\t' << buildingS[i](j,0) << '\t' << buildingS[i](j,1) << '\t' << buildingS[i](j,2) << '\n'; //+1 on the imae coordinates to verify with opticks' rasters (origin is 1,1)
+		}
+
+		building_file.close();
+
+		std::ofstream inliers_file;
+		std::ofstream parameters_file;
+		inliers_file.open (std::string(path) + "Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
+		parameters_file.open (std::string(path) + "plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");;
+		int cont = 0;
+		Ransac_buildings.ransac_msg += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
+		Ransac_buildings.ransac_msg += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
+		Ransac_buildings.ComputeModel(buildingS[i], ransac_threshold);
+		
+		buldingS_number_inliers[i]= Ransac_buildings.n_best_inliers_count;
+		buildingS_inliers[i] = Ransac_buildings.final_inliers;
+		buildingS_outliers[i] = Ransac_buildings.final_outliers;
+		buildingS_plane_coefficients[i] = Ransac_buildings.final_model_coefficients;
+		double inliers_percentage = static_cast<double>( (Ransac_buildings.n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
+		int inliers_so_far = Ransac_buildings.n_best_inliers_count;
+		std::vector<int> old_final_outliers = Ransac_buildings.final_outliers;
+		 
+
+		// DRAWS THE ROOFS yellow
+		for (int k = 0; k < Ransac_buildings.n_best_inliers_count; k++)
+		{
+			int pixel_row = static_cast<int>(buildingS[i](Ransac_buildings.final_inliers[k], 1) /  dem_spacing);
+            int pixel_column = static_cast<int>(buildingS[i](Ransac_buildings.final_inliers[k], 0) /  dem_spacing);
+
+			unsigned char r = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+            unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+            unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+			roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+            roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+            roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+		}
+
+		while (inliers_percentage < 0.90)
+		{
+			cont ++;
+			Ransac_buildings.ransac_msg += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
+			Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_outliers;
+			building_outliers.setConstant(buildingS[i].rows() - inliers_so_far, 3, 0.0);
+			
+		   	//* forse il metodo va già bene così, perchè riempio la matrice deglio outlier in maniera ordinata,
+			//* solo che gli indici degli inlier/outlier non sono più indicativi rispetto alla matrice di building originale, ma rispetto alla matrice di innput
+			//* devo riporatre gli ID degli indici alla loro posizione origiale
+			for (int w = 0; w <building_outliers.rows(); w++)
+			{
+				building_outliers(w, 0) = buildingS[i](old_final_outliers[w], 0);
+			    building_outliers(w, 1) = buildingS[i](old_final_outliers[w], 1);
+			    building_outliers(w, 2) = buildingS[i](old_final_outliers[w], 2);
+				
+				//Ransac_buildings.ransac_msg += "\n" + StringUtilities::toDisplayString(pixel_row+1) + "\t" + StringUtilities::toDisplayString(pixel_column+1) + "\t" + StringUtilities::toDisplayString(final_outliers[w]) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 0))+ "\t"+ StringUtilities::toDisplayString(building_outliers(w, 1)) + "\t" + StringUtilities::toDisplayString(building_outliers(w, 2))+"\n"; // needed for tesing (test passed at first iteration)
+			}
+			
+
+			Ransac_buildings.ransac_msg += "\n";
+			//Ransac_buildings.ransac_msg += "\nprova "+ StringUtilities::toDisplayString(inliers_percentage*100)+"\n";
+			Ransac_buildings.ComputeModel(building_outliers, ransac_threshold);
+			//inliers_percentage = inliers_percentage + static_cast<double>( (n_best_inliers_count) ) / static_cast<double> (building_outliers.rows());
+			inliers_percentage = inliers_percentage + static_cast<double>( (Ransac_buildings.n_best_inliers_count) ) / static_cast<double> (buildingS[i].rows());
+
+			Ransac_buildings.ransac_msg += "\nINLIERS IN RELATION TO GLOBAL INDEX ("+ StringUtilities::toDisplayString(Ransac_buildings.n_best_inliers_count) + ")\n";
+	        for(size_t i = 0; i < Ransac_buildings.n_best_inliers_count; i++)
+	        {
+		       Ransac_buildings.ransac_msg +=  StringUtilities::toDisplayString(old_final_outliers[Ransac_buildings.final_inliers[i]])+" ";
+			   inliers_file << old_final_outliers[Ransac_buildings.final_inliers[i]] << "\t";
+	        }
+			Ransac_buildings.ransac_msg += "\n";
+			inliers_file << "\n";
+
+			//old_final_outliers.resize(building_outliers.rows() - Ransac_buildings.n_best_inliers_count);
+			Ransac_buildings.ransac_msg += "\nOUTLIERS IN RELATION TO GLOBAL INDEX("+ StringUtilities::toDisplayString(building_outliers.rows() - Ransac_buildings.n_best_inliers_count) + ")\n";
+			for(size_t i = 0; i < building_outliers.rows() - Ransac_buildings.n_best_inliers_count; i++)
+			{
+				Ransac_buildings.ransac_msg +=  StringUtilities::toDisplayString(old_final_outliers[Ransac_buildings.final_outliers[i]])+" ";
+				old_final_outliers[i] = old_final_outliers[Ransac_buildings.final_outliers[i]];// in this way I refer the outliers indexes to the global indexes (those referred to the original eigen matrix)
+			}
+			
+			parameters_file << Ransac_buildings.final_model_coefficients[0] << "\t" << Ransac_buildings.final_model_coefficients[1] << "\t" << Ransac_buildings.final_model_coefficients[2] << "\t" << Ransac_buildings.final_model_coefficients[3] << "\n";
+
+			if (cont == 1)
+			{
+				// DRAWS THE ROOFS blue
+			   for (int k = 0; k < Ransac_buildings.n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 255;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			if (cont ==2)
+			{
+				// DRAWS THE ROOFS green
+			   for (int k = 0; k < Ransac_buildings.n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			if (cont ==3)
+			{
+				// DRAWS THE ROOFS brown
+			   for (int k = 0; k < Ransac_buildings.n_best_inliers_count; k++)
+			   {
+					int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 1) /  dem_spacing);
+					int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 0) /  dem_spacing);
+
+					unsigned char r = 128;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char g = 0;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+					unsigned char b = 0;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+					roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+				}
+			}
+
+			//if (cont == 4)
+			//{
+			//	// DRAWS THE ROOFS white
+			//   for (int k = 0; k < Ransac_buildings.n_best_inliers_count; k++)
+			//   {
+			//		int pixel_row = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 1) /  dem_spacing);
+			//		int pixel_column = static_cast<int>(buildingS[i](old_final_outliers[Ransac_buildings.final_inliers[k]], 0) /  dem_spacing);
+
+			//		unsigned char r = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+			//		unsigned char g = 255;// unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+			//		unsigned char b = 255;//unsigned char(255 * (rand()/(1.0 + RAND_MAX)));
+		
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[0] = b;
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[1] = g;
+			//		roof_image.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
+			//	}
+			//}
+
+
+			Ransac_buildings.ransac_msg += "\n"; 
+			inliers_so_far += Ransac_buildings.n_best_inliers_count;  
+			
+		    
+		}// fine while
+		Ransac_buildings.ransac_msg += "__________________________________________________________________\n";
+		//boh_file.close();
+
+		cont_file << i << "\t" << cont << "\n";
+	}
+	building_file.close();
+	cont_file.close();
+	cv::imshow("roofs", roof_image);
+	cv::imwrite(path + "Tiles/building_roofs.png", roof_image);
+	cv::waitKey(0);
+	
+	pProgress->updateProgress("All buildings have been processed with RANSAC.", 100, NORMAL);
+    pStep->finalize();
+	return true;
+}
+
+bool Segmentation::print_result()
+{
+	std::ofstream results_file;
+	std::ofstream inliers_file;
+	std::ofstream parameters_file;
+	results_file.open (std::string(path) + "Ransac_buildings_results.txt");
+	inliers_file.open (std::string(path) + "buildings_inliers.txt");
+	parameters_file.open (std::string(path) + "buildings_parameters.txt");
+	for(int i = 0; i < buildingS.size(); i++)// loop on every building
+    //for(int i = 0; i < 10; i++)
+	{// i index is the building (blob) index
+		// Printing the model coefficients
+		results_file << "\n______________Building " << StringUtilities::toDisplayString(i) << "__________\n";
+		results_file << "Coefficients" <<"\n";
+		results_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
+	    parameters_file <<  buildingS_plane_coefficients[i][0] << '\t' << buildingS_plane_coefficients[i][1] << '\t' << buildingS_plane_coefficients[i][2] << '\t' << buildingS_plane_coefficients[i][3] << '\n';
+
+		results_file << "inliers found\n";
+		for(int j = 0; j <  buldingS_number_inliers[i]; j++)
+		{ 
+	      results_file << buildingS_inliers[i][j] << '\t'; 
+		  inliers_file << buildingS_inliers[i][j] << '\t'; 
+	    }
+		inliers_file << '\n';
+
+		/*results_file << "\noutliers found and their coordinates\n";
+		Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> building_outliers;
+		building_outliers.setConstant(buildingS[i].rows() - buldingS_number_inliers[i], 3, 0.0);
+		for (int w = 0; w <building_outliers.rows(); w++)
+		{
+				building_outliers(w, 0) = buildingS[i](buildingS_outliers[i][w], 0);
+			    building_outliers(w, 1) = buildingS[i](buildingS_outliers[i][w], 1);
+			    building_outliers(w, 2) = buildingS[i](buildingS_outliers[i][w], 2);
+				results_file << buildingS_outliers[i][w] << '\t'<< building_outliers(w, 0) << '\t'<< building_outliers(w, 1) << '\t'<< building_outliers(w, 2) << '\n';
+		}*/
+		 
+	}
+	results_file.close();
+	inliers_file.close();
+	parameters_file.close();
+
+	results_file.open (std::string(path) + "Ransac_log.txt");
+	results_file << Ransac_buildings.ransac_msg;
+	results_file.close();
+	return true;
 }

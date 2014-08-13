@@ -173,6 +173,8 @@ void Gui::RunApplication()
 	   seg.connected_components(result_watershed);
 	   seg.draw_buildings_contours(result_watershed);
 	   seg.process_all_point_cloud_with_pca(n_rows_tiles, n_cols_tiles);
+	   seg.Ransac_for_buildings(dem_spacing, RANSAC_threshold, original_tiles_merged);
+	   seg.print_result();
 	}
 	
 	/*StepResource pStep("RANSAC", "app", "93a9a636-218e-11e4-969b-b2227cce2b54");

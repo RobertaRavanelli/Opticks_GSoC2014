@@ -15,8 +15,7 @@
 #include <QtGui/QSpinBox>
 #include <QtGui/qapplication.h>
 #include <QtGui/QPushButton>
-#include <Qt/qevent.h>
-#include <QtGui/QMessageBox>
+
 #include "Progress.h"
 #include "ProgressResource.h"
 #include "Interpolation.h"
@@ -40,6 +39,8 @@
 	mpHorizontalTiles = new QDoubleSpinBox(this);
 	mpVerticalTiles = new QDoubleSpinBox(this);
 	mpLASListCombo = new QComboBox(this);
+	mpInsertPath = new QLineEdit(this);
+
 
 	mpLASListCombo -> setFixedSize(300,20);
 	mpDEMspacing -> setFixedSize(50,20);
@@ -54,22 +55,25 @@
 	QLabel *xlabel = new QLabel("X");
 	QLabel *SelectRANSACthreshold = new QLabel("Select the value of the RANSAC threshold");
 	QLabel *RANSAC_threshold_unit = new QLabel("m/ft");//it depends from the reference system used in the file
-	
+	QLabel *Select_path_for_result = new QLabel("Select the path for the folder of the results");
+
 	// Layout
     QGridLayout* pGrid = new QGridLayout(this);
-	pGrid->addWidget(SelectLAS, 0, 0, 1, 6);
-	pGrid->addWidget(mpLASListCombo, 1, 0, 1, 6);
-	pGrid->addWidget(SelectDEMspacing, 2, 0, 1, 1);
-	pGrid->addWidget(mpDEMspacing, 3, 0, 1, 1);
-    pGrid->addWidget(dem_spacing_unit, 3, 1);
-	pGrid->addWidget(SelectTILEnumber, 4, 0);
-	pGrid->addWidget(mpHorizontalTiles, 5, 0, 1, 1);
-	pGrid->addWidget(xlabel, 5, 1);
-	pGrid->addWidget(mpVerticalTiles, 5, 2, 1, 1);
-	pGrid->addWidget(SelectRANSACthreshold, 6, 0);
-	pGrid->addWidget(mpRANSACthreshold, 7, 0);
-	pGrid->addWidget(RANSAC_threshold_unit, 7, 1);
-	pGrid->addWidget(mpRunButton, 8, 8);
+	pGrid->addWidget(SelectLAS, 2, 0, 1, 6);
+	pGrid->addWidget(mpLASListCombo, 3, 0, 1, 6);
+	pGrid->addWidget(SelectDEMspacing, 4, 0, 1, 1);
+	pGrid->addWidget(mpDEMspacing, 5, 0, 1, 1);
+    pGrid->addWidget(dem_spacing_unit, 5, 1);
+	pGrid->addWidget(SelectTILEnumber, 6, 0);
+	pGrid->addWidget(mpHorizontalTiles, 7, 0, 1, 1);
+	pGrid->addWidget(xlabel, 7, 1);
+	pGrid->addWidget(mpVerticalTiles, 7, 2, 1, 1);
+	pGrid->addWidget(SelectRANSACthreshold, 8, 0);
+	pGrid->addWidget(mpRANSACthreshold, 9, 0);
+	pGrid->addWidget(RANSAC_threshold_unit, 9, 1);
+	pGrid->addWidget(Select_path_for_result, 0, 0);
+	pGrid->addWidget(mpInsertPath, 1, 0);
+	pGrid->addWidget(mpRunButton, 10, 10);
 	
 	// Connections
 	VERIFYNRV(connect(mpRunButton, SIGNAL( clicked() ), this, SLOT( RunApplication() )));
@@ -131,6 +135,8 @@ void Gui::init()
    mpVerticalTiles ->setMinimum(1);
    mpVerticalTiles ->setMaximum(20);
    mpVerticalTiles ->setValue(10);
+
+   mpInsertPath->setText("C:/Users/Roberta/Desktop/Results/");
 }
 
 
@@ -153,11 +159,12 @@ void Gui::RunApplication()
     }
 	else
 	{
+		std::string path = mpInsertPath->text().toLocal8Bit().constData();//http://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
 		std::string las_name = mPointCloudNames.at(mpLASListCombo->currentIndex());
 		pElement = dynamic_cast<PointCloudElement*> (pModel->getElement(las_name, "", NULL ));
 	
 		Interpolation interp = Interpolation();
-		Segmentation seg = Segmentation();
+		Segmentation seg = Segmentation(path);
 		float dem_spacing = mpDEMspacing->value();
 		int n_rows_tiles = mpHorizontalTiles->value();
 		int n_cols_tiles = mpVerticalTiles->value();
@@ -165,8 +172,9 @@ void Gui::RunApplication()
 		dem = interp.generate_DEM( pElement, dem_spacing) ;
 		double RANSAC_threshold =   mpRANSACthreshold->value();
 	
-		std::string path = "C:/Users/Roberta/Desktop/Results/";
-
+		//std::string path = "C:/Users/Roberta/Desktop/Results/";
+		
+	
 		if (dem.size() != -1) // check if DEM  matrix is null
 		{
 		   interp.print_DEM_on_file( std::string(path) + "dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
@@ -190,7 +198,7 @@ void Gui::RunApplication()
 		}
 	
 			// RANSAC test: it must return a=0, b=0, c=1 and d=-10: the plane Z=10
-			Ransac Ransac_test = Ransac();
+			Ransac Ransac_test = Ransac(path);
 			Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> matrix;
 			matrix.setConstant(10000, 3, 0.0);
 			for (int i = 0; i< 9000; i++)
@@ -207,8 +215,10 @@ void Gui::RunApplication()
 				 matrix(i,2) = rand() % 700;
 			}
 			Ransac_test.ComputeModel(matrix, RANSAC_threshold);
-			std::string ciao = Ransac_test.ransac_msg;
-	
+			//std::string current_locale_text = qs.toLocal8Bit().constData();
+			std::string ciao = Ransac_test.ransac_msg; 
+
+		//Gui::init();// needed to reload las files
 		mpRunButton->setEnabled(true);
 		pStep->finalize(Message::Success);
 	}

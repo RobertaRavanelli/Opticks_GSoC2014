@@ -83,9 +83,10 @@ public:
 	std::vector<int> final_outliers;// the outiers found after ALL the iterations
 	Eigen::VectorXd final_model_coefficients; // the coefficients corrispondent to the max number of inliers
 	int n_best_inliers_count;
-
-	Ransac(void);
-	~Ransac(void);
+	
+	Ransac::Ransac(std::string path_for_result);
+	Ransac::Ransac(void);
+	Ransac::~Ransac(void);
 
 	// these methods are needed to apply the RANSAC algorhitm directly to the .las file (PointCloudElement)
 	bool Ransac::ComputeModel(PointCloudElement* pElement, double ransac_threshold);

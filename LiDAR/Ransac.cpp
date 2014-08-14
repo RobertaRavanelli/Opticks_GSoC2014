@@ -52,10 +52,19 @@
 #include <boost/random/random_device.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
+Ransac::Ransac(std::string path_for_result)
+{
+	 //path = "C:/Users/Roberta/Desktop/Results/";
+	 path = path_for_result;
+}
+
+
 Ransac::Ransac(void)
 {
 	 path = "C:/Users/Roberta/Desktop/Results/";
+	// path = path_for_result;
 }
+
 
 Ransac::~Ransac(void)
 {

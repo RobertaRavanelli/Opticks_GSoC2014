@@ -19,7 +19,7 @@
 #include <QtGui/QRadioButton>
 #include <QtGui/QComboBox>
 #include <QtGui/QDoubleSpinBox>
-
+#include <QtGui/QLineEdit>
 #include "PointCloudAccessor.h"
 #include "PointCloudAccessorImpl.h"
 #include "PointCloudDataDescriptor.h"
@@ -58,6 +58,7 @@ private:
 	QDoubleSpinBox* mpRANSACthreshold;
 	QDoubleSpinBox* mpHorizontalTiles;
 	QDoubleSpinBox* mpVerticalTiles;
+	QLineEdit* mpInsertPath;
 	Service<ModelServices> pModel;
     PointCloudElement* pElement;
 	void init();

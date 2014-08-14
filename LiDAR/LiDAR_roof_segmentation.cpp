@@ -108,6 +108,7 @@ bool LiDAR_roof_segmentation::showGui()
 	VERIFYNR(connect(mpGui, SIGNAL(finished(int)), this, SLOT(dialogClosed())));
 	
 	mpGui->show();
+	//mpGui->exec(); // I should use this, as Trevor suggested
 	pStep->finalize(Message::Success);
 	return true;
 }

@@ -14,9 +14,10 @@
 #include "ProgressResource.h"
 #include "ProgressTracker.h"
 
-Segmentation::Segmentation(void)
+Segmentation::Segmentation(std::string path_for_result)
 {
-	path = "C:/Users/Roberta/Desktop/Results/";
+	//path = "C:/Users/Roberta/Desktop/Results/";
+	path = path_for_result;
 	k_for_process_all_point_cloud = 0;
 }
 
@@ -486,7 +487,7 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 	Progress *pProgress = pResource.get(); 
 	pProgress-> setSettingAutoClose(true);
 	pProgress->updateProgress("Computing RANSAC on all buildings", 0, NORMAL);
-	Ransac_buildings = Ransac();
+	Ransac_buildings = Ransac(Segmentation::path);
 	cv::Mat roof_image = cv::Mat::zeros(original_tiles_merged.size(), CV_8UC3);
 		
 	buildingS.resize(blobs.size());

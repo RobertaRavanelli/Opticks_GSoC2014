@@ -36,6 +36,7 @@ public:
 
 
 	Ransac Ransac_buildings;
+	//Ransac Ransac_buildings = Ransac(path);
 	//* buildingS is a std::vector of Eigen matrixes
 	//* each row of this std::vector is an Eigen matrix with rows = number of points belonging to the specific building and columns = 3 (x,y,z coordinates)
 	//* first row stores the x,y and z coordinates of all the points belonging to first identified building
@@ -48,8 +49,8 @@ public:
 	std::vector<int> buldingS_number_inliers; // every row stores the number of inliers for each building (only first iteration - iteration number 0)
 
 
-	Segmentation(void);
-	~Segmentation(void);
+	Segmentation(std::string path_for_result);
+	Segmentation::~Segmentation(void);
 	std::vector<cv::Mat>  Segmentation::n_x_m_tile_generator(cv::Mat image, int n_rows, int n_cols);
 	cv::Mat Segmentation::merge_tiles(std::vector<cv::Mat> tiles_array, int n_rows, int n_cols);
 	

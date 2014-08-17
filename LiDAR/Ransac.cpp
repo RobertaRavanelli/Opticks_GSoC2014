@@ -54,14 +54,14 @@
 
 Ransac::Ransac(std::string path_for_result)
 {
-	 //path = "C:/Users/Roberta/Desktop/Results/";
+	 //path = "C:/Users/Roberta/Desktop";
 	 path = path_for_result;
 }
 
 
 Ransac::Ransac(void)
 {
-	 path = "C:/Users/Roberta/Desktop/Results/";
+	 path = "C:/Users/Roberta/Desktop";
 	// path = path_for_result;
 }
 
@@ -138,7 +138,7 @@ bool Ransac::ComputeModel(PointCloudElement* pElement, double ransac_threshold)
 	
 	//// writing the results on a file
 	std::ofstream RANSAC_results_file;
-	RANSAC_results_file.open (std::string(path) + "Ransac_results.txt");
+	RANSAC_results_file.open (std::string(path) + "/Results/Ransac_results.txt");
     RANSAC_results_file << "------RANSAC final results-------\nFirst row: inliers id, second row plane parameters (treshold used: " << ransac_threshold << ", " <<  iterations_ << " iterations on " << k <<  " needed)\n";
 
 	ransac_msg += "------ RANSAC final results -------\n";

@@ -16,7 +16,7 @@
 
 Segmentation::Segmentation(std::string path_for_result)
 {
-	//path = "C:/Users/Roberta/Desktop/Results/";
+	//path = "C:/Users/Roberta/Desktop";
 	path = path_for_result;
 	k_for_process_all_point_cloud = 0;
 }
@@ -52,7 +52,7 @@ std::vector<cv::Mat>  Segmentation::n_x_m_tile_generator(cv::Mat image, int n_ro
         oss << i << "_" << j << ".png";
         std::string name = oss.str();
 		cv::Mat CVtile32FC1;
-        imwrite(path + "Tiles/"+ name, subImage);
+        imwrite(path + "/Results/Tiles/"+ name, subImage);
 		k++;
         }
 	}
@@ -145,12 +145,12 @@ double Segmentation::getOrientation(std::vector<cv::Point> &pts, cv::Mat &img)
 bool Segmentation::pca_segmentation(std::string image_name)//, PointCloudElement* pElement)
 {
 	// http://robospace.wordpress.com/2013/10/09/object-orientation-principal-component-analysis-opencv/
-	cv::Mat bw, img = cv::imread(path + image_name); 
+	cv::Mat bw, img = cv::imread(path + "/Results/" + image_name); 
 	 
     // Convert it to greyscale
     cv::cvtColor(img, bw, CV_BGR2GRAY);
 
-	cv::equalizeHist(bw, bw);// for the test point cloud, it improves the result, for SD point cloud it improves the results for the superior tiles, it worsens the result for the central tiles (those with buildings of H shape)
+	//cv::equalizeHist(bw, bw);// for the test point cloud, it improves the result, for SD point cloud it improves the results for the superior tiles, it worsens the result for the central tiles (those with buildings of H shape)
 	//cv::normalize(bw, bw, 0, 255, cv::NORM_MINMAX, CV_8UC1); // it doesn't improve but it also doesn' t worsen the result for the test point cloud; same behaviour for he SD point cloud; pratically it is useless
 
      cv::Scalar temp_mean;
@@ -170,7 +170,7 @@ bool Segmentation::pca_segmentation(std::string image_name)//, PointCloudElement
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(bw, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-
+	 
     // For each object
     for (size_t i = 0; i < contours.size(); ++i)
     {
@@ -212,7 +212,7 @@ bool Segmentation::watershed_segmentation(std::string image_name)//, PointCloudE
 	cv::Mat median_image;
 	cv::Mat binary;
 
-	src = cv::imread(path + image_name, 1);
+	src = cv::imread(path + "/Results/" +image_name, 1);
 	cv::medianBlur (src, median_image, 5);
     cv::cvtColor(median_image, binary, CV_BGR2GRAY);
 	
@@ -320,14 +320,13 @@ cv::Mat Segmentation::process_all_point_cloud_with_watershed(int n_rows, int n_c
                oss << i << "_" << j << ".png";
                std::string name = oss.str();
                Segmentation::watershed_segmentation("Tiles/"+ name);
-			   //Segmentation::pca_segmentation("Tiles/"+ name);
 			   k_for_process_all_point_cloud++;
 	         }
          }
 	
 	cv::Mat merged_mat = Segmentation::merge_tiles(result_tiles_array, n_rows, n_cols);//this is a trinary image: we need to convert it in a binary image
-	cv::imshow("merged result watershed", merged_mat);
-	cv::imwrite(path + "Tiles/result_watershed.png", merged_mat);
+	//cv::imshow("merged result watershed", merged_mat);
+	cv::imwrite(path + "/Results/result_watershed.png", merged_mat);
 
 	cv::Mat mask;
 	cv::threshold(merged_mat, mask, 250.0f, 1.0f, cv::THRESH_BINARY_INV);// 255 is background; mask is a CV8U image, since merged image is of this type
@@ -357,9 +356,8 @@ bool Segmentation::process_all_point_cloud_with_pca(int n_rows, int n_cols)//, P
       }
 
 	cv::Mat merged_mat = Segmentation::merge_tiles(result_tiles_array, n_rows, n_cols);
-	cv::imshow("merged result pca", merged_mat);
-	cv::imwrite(path + "Tiles/result_pca.png", merged_mat);
-
+	//cv::imshow("merged result pca", merged_mat);
+	cv::imwrite(path + "/Results/result_pca.png", merged_mat);
 	cv::waitKey(0);
 	return true;
 }
@@ -445,12 +443,10 @@ bool Segmentation::connected_components(cv::Mat input)//, std::string image_name
             output.at<cv::Vec3b>(pixel_row, pixel_column)[2] = r;
         }
     }
-
-	//draw_raster_from_openCV_mat ("classsified buildings", classified_buildings,  pElement);
 	
-    cv::imshow("RGB classsified buildings", output);
+    //cv::imshow("RGB classsified buildings", output);
     
-	cv::imwrite(path+"Tiles\result_con_comp.png", output);
+	cv::imwrite(path+"/Results/result_con_comp.png", output);
 	cv::waitKey(0);
 	return true;
 }
@@ -472,8 +468,8 @@ bool Segmentation::draw_buildings_contours(cv::Mat image)
      segmentation_msg += "\n" + StringUtilities::toDisplayString(contours.size()) + " identified buildings with find contours method\n\n";
    
      // Show in a window
-     cv::imshow("Building contours", drawing);
-
+     //cv::imshow("Building contours", drawing);
+	 cv::imwrite(path + "/Results/building_contours.png", drawing);
 	 return true;
 }
 
@@ -498,11 +494,11 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 
 	std::ofstream building_file;
 	std::ofstream cont_file;
-	cont_file.open (std::string(path) + "Number_of_RANSAC_applications.txt"); 
+	cont_file.open (std::string(path) + "/Results/Number_of_RANSAC_applications.txt"); 
 	for(int i = 0; i < blobs.size(); i++)
 	{// i index is the building (blob) index
 		pProgress->updateProgress("Computing RANSAC on all buildings\nBuilding "+ StringUtilities::toDisplayString(i) + " on "+ StringUtilities::toDisplayString(blobs.size()), static_cast<double>(static_cast<double>(i)/blobs.size()*100), NORMAL);
-		building_file.open (std::string(path) + "Building_" + StringUtilities::toDisplayString(i)+".txt");
+		building_file.open (std::string(path) + "/Results/Building_" + StringUtilities::toDisplayString(i)+".txt");
 		building_file << 'i' << '\t' << 'j' << '\t' << 'X' << '\t' << 'Y' << '\t' << 'Z' << '\n'; 
 		buildingS[i].setConstant(blobs[i].size(), 3, 0.0);
 		
@@ -528,8 +524,8 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 
 		std::ofstream inliers_file;
 		std::ofstream parameters_file;
-		inliers_file.open (std::string(path) + "Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
-		parameters_file.open (std::string(path) + "plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");;
+		inliers_file.open (std::string(path) + "/Results/Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
+		parameters_file.open (std::string(path) + "/Results/plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");;
 		int cont = 0;
 		Ransac_buildings.ransac_msg += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
 		Ransac_buildings.ransac_msg += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
@@ -690,7 +686,8 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 	building_file.close();
 	cont_file.close();
 	cv::imshow("roofs", roof_image);
-	cv::imwrite(path + "Tiles/building_roofs.png", roof_image);
+	
+	cv::imwrite(path + "/Results/building_roofs.png", roof_image);
 	cv::waitKey(0);
 	
 	pProgress->updateProgress("All buildings have been processed with RANSAC.", 100, NORMAL);
@@ -703,9 +700,9 @@ bool Segmentation::print_result()
 	std::ofstream results_file;
 	std::ofstream inliers_file;
 	std::ofstream parameters_file;
-	results_file.open (std::string(path) + "Ransac_buildings_results.txt");
-	inliers_file.open (std::string(path) + "buildings_inliers.txt");
-	parameters_file.open (std::string(path) + "buildings_parameters.txt");
+	results_file.open (std::string(path) + "/Results/Ransac_buildings_results.txt");
+	inliers_file.open (std::string(path) + "/Results/buildings_inliers.txt");
+	parameters_file.open (std::string(path) + "/Results/buildings_parameters.txt");
 	for(int i = 0; i < buildingS.size(); i++)// loop on every building
     //for(int i = 0; i < 10; i++)
 	{// i index is the building (blob) index
@@ -739,7 +736,7 @@ bool Segmentation::print_result()
 	inliers_file.close();
 	parameters_file.close();
 
-	results_file.open (std::string(path) + "Ransac_log.txt");
+	results_file.open (std::string(path) + "/Results/Ransac_log.txt");
 	results_file << Ransac_buildings.ransac_msg;
 	results_file.close();
 	return true;

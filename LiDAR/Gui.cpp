@@ -42,7 +42,7 @@
 	mpInsertPath = new QLineEdit(this);
 
 
-	mpLASListCombo -> setFixedSize(300,20);
+	mpLASListCombo -> setFixedSize(350,20);
 	mpDEMspacing -> setFixedSize(50,20);
 	mpHorizontalTiles -> setFixedSize(50,20);
 	mpVerticalTiles -> setFixedSize(50,20);
@@ -136,7 +136,8 @@ void Gui::init()
    mpVerticalTiles ->setMaximum(20);
    mpVerticalTiles ->setValue(10);
 
-   mpInsertPath->setText("C:/Users/Roberta/Desktop/Results/");
+   //mpInsertPath->setText("C:/Users/Roberta/Desktop/Results/");
+    mpInsertPath->setText("C:/Users/Roberta/Desktop");
 }
 
 
@@ -177,7 +178,7 @@ void Gui::RunApplication()
 	
 		if (dem.size() != -1) // check if DEM  matrix is null
 		{
-		   interp.print_DEM_on_file( std::string(path) + "dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
+		   interp.print_DEM_on_file( std::string(path) + "/Results/dem_" + StringUtilities::toDisplayString(button_cont) + "_from_gui.txt", dem);
 		   draw_raster_from_eigen_mat ("dem "+ StringUtilities::toDisplayString(button_cont), dem, pElement);
 		   cv::Mat CVdemRM(static_cast<int>(dem.rows()), static_cast<int>(dem.cols()), CV_32FC1, dem.data());
 		   std::vector<cv::Mat> tiles = seg.n_x_m_tile_generator(CVdemRM, n_rows_tiles, n_cols_tiles);
@@ -186,7 +187,7 @@ void Gui::RunApplication()
 		   //* (however they are all on the last columns and/or last rows, so the original raster conformation is preserved - no problems for the image coordinates of the pixels)
 		   //* for example, original_tiles_merged is needed for the mask application (method use to retrieve the z coordinate of every pixel identified as belonging to a building)
 		   cv::Mat original_tiles_merged = seg.merge_tiles(tiles, n_rows_tiles, n_cols_tiles);
-		   draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
+		   //draw_raster_from_openCV_mat ("original tiles merged " + StringUtilities::toDisplayString(button_cont), original_tiles_merged, pElement);
 		   cv::Mat result_watershed = seg.process_all_point_cloud_with_watershed(n_rows_tiles, n_cols_tiles);
 		   cv::Mat buildings =  original_tiles_merged.mul(result_watershed);
 		   draw_raster_from_openCV_mat ("buildings " + StringUtilities::toDisplayString(button_cont), buildings, pElement);

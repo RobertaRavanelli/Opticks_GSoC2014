@@ -45,14 +45,14 @@ LiDAR_roof_segmentation::LiDAR_roof_segmentation():
    mpGui(NULL)
 {
    setDescriptorId("{09d9618e-1d57-11e4-ba18-b2227cce2b54}");
-   setName("LIDAR Roof Extraction");
+   setName("LiDAR Roof Extraction Plug-In");
    setDescription("Plug-In developed for the GSoC 2014 project http://opticks.org/confluence/display/~roberta.ravanelli/GSoC+2014%3A+LiDAR+segmentation+Plug-In+based+on+RANSAC+and+PCA+algorithms+for+Opticks");
    setCreator("Roberta Ravanelli <roberta.ravanelli@uniroma1.it>");
    setVersion("Sample");
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
    setProductionStatus(false);
    setType("Sample");
-   setMenuLocation("[Point Cloud]/Roof Extraction");
+   setMenuLocation("[Point Cloud]/LiDAR Roof Extraction Plug-In");
    setAbortSupported(false);
 }
 

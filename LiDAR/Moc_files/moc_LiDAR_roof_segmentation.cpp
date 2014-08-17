@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'LiDAR_roof_segmentation.h'
 **
-** Created: Fri 8. Aug 23:17:14 2014
+** Created: Wed 13. Aug 22:28:52 2014
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.1)
 **
 ** WARNING! All changes made in this file will be lost!

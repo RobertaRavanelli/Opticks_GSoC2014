@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'Tutorial1.h'
 **
-** Created: Fri 8. Aug 23:17:05 2014
+** Created: Sun 10. Aug 22:46:45 2014
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.1)
 **
 ** WARNING! All changes made in this file will be lost!

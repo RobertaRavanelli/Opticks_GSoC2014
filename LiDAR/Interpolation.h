@@ -1,6 +1,3 @@
-//* CLASS USED TO GENERATE A DEM FROM THE ORIGINAL LAS FILE
-//* FOR NOW IT SUPORTS ONLY THE NEARESTR NEIGHBOR INTERPOLATION METHOD, BUT IN FUTURE OTHER INTERPOLATION METHODS COULD BE ADDED
-
 /*
  * The information in this file is
  * Copyright(c) 2007 Ball Aerospace & Technologies Corporation
@@ -9,6 +6,9 @@
  * The license text is available from   
  * http://www.gnu.org/licenses/lgpl.html
  */
+
+//* CLASS USED TO GENERATE A DEM FROM THE ORIGINAL LAS FILE
+//* FOR NOW IT SUPORTS ONLY THE NEARESTR NEIGHBOR INTERPOLATION METHOD, BUT IN FUTURE OTHER INTERPOLATION METHODS COULD BE ADDED
 
 #pragma once
 #include "PointCloudAccessor.h"

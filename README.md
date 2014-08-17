@@ -24,4 +24,4 @@ I also copied the cxcore.h header file (needed for the conversion from/to OpenCV
 
 =============== Test point cloud ========
 You can find a test point cloud at the link below:
-https://www.dropbox.com/s/7ulz7a1twu1yyk4/test_point_cloud.las
+https://www.dropbox.com/s/iewrzirro79o0hn/GSoC2014_test_point_cloud.las

@@ -361,7 +361,7 @@ bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc)
 
 ///////////////////////
 
-bool Ransac::ComputeModel(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, double ransac_threshold)
+bool Ransac::ComputeModel(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, const double ransac_threshold)
 {
 	double probability_= 0.99;        // probability that at least one of the random samples of s (for us 3) points is free from outliers
 	int max_iterations_ = 100000;//200000;     // safeguard against being stuck in this loop forever
@@ -427,6 +427,7 @@ bool Ransac::ComputeModel(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 
 	ransac_msg += StringUtilities::toDisplayString(n_best_inliers_count)+ " inliers found on " + StringUtilities::toDisplayString(data.rows()) + " total points (" + StringUtilities::toDisplayString(static_cast<double> (n_best_inliers_count) * one_over_indices * 100)+ "% of inliers)\n";
 
 	ransac_msg += "\napproximated model coefficients \n" + StringUtilities::toDisplayString(final_model_coefficients[0])+'\n'+ StringUtilities::toDisplayString(final_model_coefficients[1])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[2])+'\n'+StringUtilities::toDisplayString(final_model_coefficients[3])+'\n';// verifica
+		
 	if (Ransac::optimizeModelCoefficients(data) == true)
 	{
 			final_model_coefficients = optimized_coefficients;
@@ -451,6 +452,8 @@ bool Ransac::ComputeModel(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 
 	}
 
 	ransac_msg += "\n\n";
+
+	//Ransac::getDistancesFromPlane(final_model_coefficients, data);
 	
 	//RANSAC_results_file << '\n'<< final_model_coefficients[0] << '\t' << final_model_coefficients[1] << '\t' << final_model_coefficients[2] << '\t' << final_model_coefficients[3] << '\n';
 	//RANSAC_results_file.close();
@@ -786,4 +789,37 @@ bool Ransac::optimizeModelCoefficients(Eigen::Matrix<double,Eigen::Dynamic, Eige
 
     roots (2) = 0.5f * (b + sd);
     roots (1) = 0.5f * (b - sd);
+  }
+
+
+  bool Ransac::getDistancesFromPlane(const Eigen::VectorXd  plane_coefficients, const Eigen::Matrix<double,  Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data)
+  {
+	  	std::vector<double> distances; 
+		distances.resize(data.rows());
+		  // Iterate through the 3d points and calculate the distances from them to the plane
+		  for (int i = 0; i < data.rows(); ++i)
+		  {
+		
+				Eigen::Vector4d pt (data(i,0),//x
+									data(i,1),//y
+									data(i,2),//z
+									1);
+	  
+				// Calculate the distance from the point to the plane normal as the dot product
+				// D = (P-A).N/|N|
+				distances[i] = fabs (plane_coefficients.dot (pt));
+		  }
+
+		// http://stackoverflow.com/questions/7616511/calculate-mean-and-standard-deviation-from-a-vector-of-samples-in-c-using-boos
+		double sum = std::accumulate(distances.begin(), distances.end(), 0.0);
+        mean_distances = sum / distances.size();
+
+		std::vector<double> diff(distances.size());
+        std::transform(distances.begin(), distances.end(), diff.begin(),
+        std::bind2nd(std::minus<double>(), mean_distances));
+        double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+        std_distances = std::sqrt(sq_sum / distances.size());// devo scriverlo dentro il file parameters files
+
+
+	  return true;
   }

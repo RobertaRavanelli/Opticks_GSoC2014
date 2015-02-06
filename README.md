@@ -11,6 +11,16 @@ Additional information about the project is available at the following link: htt
 
 Documentation for the Pug-In can be found at: http://opticks.org/confluence/display/~roberta.ravanelli/Final+report%3A+from+08-15-2014+to+08-18-2014
 
+================ Installing instructions ====================================================
+
+Download the .aeb installation file
+
+Copy the opencv_highgui220.dll and opencv_highgui220d.dll (you can find them into Dependencies folder) into Opticks installation Bin folder (for me C:\Program Files\Opticks\4.12.0\Bin)
+
+Run Opticks as Administrator
+
+Go to Help->Extensions and install the .aeb installation file
+
 ================ Compiling instructions ====================================================
 
 Inside the LiDAR folder, there is the Visual Studio project file (LiDAR.vcxproj). To compile it, the user can add it to the Opticks SDK solution (the version 20140410 of the Opticks SDK was used), but first some steps are needed.

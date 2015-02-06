@@ -525,7 +525,8 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 		std::ofstream inliers_file;
 		std::ofstream parameters_file;
 		inliers_file.open (std::string(path) + "/Results/Inliers_building_" + StringUtilities::toDisplayString(i)+".txt");
-		parameters_file.open (std::string(path) + "/Results/plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");;
+		parameters_file.open (std::string(path) + "/Results/plane_parameters_building_" + StringUtilities::toDisplayString(i)+".txt");
+		//parameters_file << "a\tb\tc\td\tmean_dist\tstd_dist\n";
 		int cont = 0;
 		Ransac_buildings.ransac_msg += "\n____________Building number " + StringUtilities::toDisplayString(i) +"____________\n";
 		Ransac_buildings.ransac_msg += "\nITERATION NUMBER " + StringUtilities::toDisplayString(cont) +"\n";
@@ -564,7 +565,7 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 			
 		   	//* forse il metodo va già bene così, perchè riempio la matrice deglio outlier in maniera ordinata,
 			//* solo che gli indici degli inlier/outlier non sono più indicativi rispetto alla matrice di building originale, ma rispetto alla matrice di innput
-			//* devo riporatre gli ID degli indici alla loro posizione origiale
+			//* devo riporatre gli ID degli indici alla loro posizione originale
 			for (int w = 0; w <building_outliers.rows(); w++)
 			{
 				building_outliers(w, 0) = buildingS[i](old_final_outliers[w], 0);
@@ -598,7 +599,9 @@ bool Segmentation::Ransac_for_buildings(float dem_spacing, double ransac_thresho
 				old_final_outliers[i] = old_final_outliers[Ransac_buildings.final_outliers[i]];// in this way I refer the outliers indexes to the global indexes (those referred to the original eigen matrix)
 			}
 			
+			//parameters_file << Ransac_buildings.final_model_coefficients[0] << "\t" << Ransac_buildings.final_model_coefficients[1] << "\t" << Ransac_buildings.final_model_coefficients[2] << "\t" << Ransac_buildings.final_model_coefficients[3] << "\t" << Ransac_buildings.mean_distances << "\t"<< Ransac_buildings.std_distances << "\n";
 			parameters_file << Ransac_buildings.final_model_coefficients[0] << "\t" << Ransac_buildings.final_model_coefficients[1] << "\t" << Ransac_buildings.final_model_coefficients[2] << "\t" << Ransac_buildings.final_model_coefficients[3] << "\n";
+
 
 			if (cont == 1)
 			{

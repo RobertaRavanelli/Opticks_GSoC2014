@@ -53,7 +53,7 @@
 #include "PointCloudDataRequest.h"
 #include "PointCloudElement.h"
 #include <Eigen/Core> //http://eigen.tuxfamily.org/index.php?title=Visual_Studio
-
+#include <numeric> // nedded for accumulate (standard deviation calculation)
 
 	// these methods are needed for eigen values
 	template<typename Matrix, typename Roots> inline void
@@ -83,7 +83,10 @@ public:
 	std::vector<int> final_outliers;// the outiers found after ALL the iterations
 	Eigen::VectorXd final_model_coefficients; // the coefficients corrispondent to the max number of inliers
 	int n_best_inliers_count;
-	
+	double mean_distances;// mean of the disances between the plane identified by RANSAC and all the points
+	double std_distances;// std of the disances between the plane identified by RANSAC and all the points
+
+
 	Ransac::Ransac(std::string path_for_result);
 	Ransac::Ransac(void);
 	Ransac::~Ransac(void);
@@ -96,10 +99,11 @@ public:
 	bool Ransac::optimizeModelCoefficients(PointCloudAccessor acc);
 
     // these methods BE APPLIED TO AN EIGEN MATRIX(AND NOT THE PELEMENT)
-	bool Ransac::ComputeModel(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, double ransac_threshold);
+	bool Ransac::ComputeModel(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data, const double ransac_threshold);
 	bool Ransac::getSamples(int model_points,int size_array);
 	bool Ransac::computeModelCoefficients( Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::countWithinDistance(double threshold,  Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 	bool Ransac::optimizeModelCoefficients(Eigen::Matrix<double,Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
+	bool Ransac::getDistancesFromPlane(const Eigen::VectorXd  plane_coefficients, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data);
 };
 
